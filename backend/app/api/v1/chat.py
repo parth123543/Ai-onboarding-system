@@ -157,7 +157,37 @@ async def chat_stream(
         citations_data = None
         action_data = None
 
-        if decision.category == "escalate":
+        if decision.category == "conversation":
+            # ── Friendly conversational reply (no RAG, no escalation) ──
+            sub_type = decision.detected_action or "greeting"
+            user_first = (user.full_name or "").split(" ")[0] or "there"
+
+            convo_replies = {
+                "greeting": (
+                    f"👋 Hey {user_first}! Welcome back — I'm your Launch Mate onboarding assistant. "
+                    f"I can help you with company policies, benefits, IT setup, task tracking, or connect you with HR.\n\n"
+                    f"What can I help you with today?"
+                ),
+                "thanks": (
+                    f"You're very welcome, {user_first}! 😊 Happy to help. "
+                    f"If you have any more questions about your onboarding, policies, or need anything else — just ask!"
+                ),
+                "farewell": (
+                    f"Goodbye {user_first}! 👋 Best of luck with your onboarding. "
+                    f"I'm here 24/7 whenever you need help — just open the chat anytime. Have a great day!"
+                ),
+                "chitchat": (
+                    f"I'm doing great, thanks for asking! 😄 I'm your AI onboarding assistant — "
+                    f"always ready to help you navigate your new role at Launch Mate.\n\n"
+                    f"Feel free to ask me about company policies, benefits, IT setup, or anything else!"
+                ),
+            }
+            reply = convo_replies.get(sub_type, convo_replies["greeting"])
+            full_response = reply
+            for word in reply.split(" "):
+                yield f"data: {json.dumps({'type': 'token', 'token': word + ' '})}\n\n"
+
+        elif decision.category == "escalate":
             esc, reply = await escalation_service.create_escalation(
                 db=db,
                 user=user,

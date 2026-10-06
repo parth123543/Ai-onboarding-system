@@ -438,19 +438,67 @@ class RAGService:
             except Exception as e:
                 logger.warning(f"Streaming failed: {e}. Using token simulation.")
 
-        # Grounded multi-chunk policy synthesis
-        answer_parts = []
+        # ── Offline grounded policy synthesis (clean, readable format) ──
+        # Extract key sentences from chunks and synthesize a readable answer
+        seen_sentences = set()
+        extracted_facts = []
+        source_titles = []
+
         for c, d, _ in valid_chunks[:3]:
-            sec = f" (*{c.section_title}*)" if c.section_title else ""
-            answer_parts.append(f"**From {d.title}{sec}:**\n{c.content}")
-        
-        grounded_body = "\n\n".join(answer_parts)
-        text_response = (
-            f"Here is the verified information from your official onboarding documentation:\n\n"
-            f"{grounded_body}\n\n"
-            f"---\n"
-            f"💡 *Need further assistance or personal exceptions? You can ask me to raise an HR ticket or request an agent call anytime.*"
-        )
+            title = d.title or "Company Handbook"
+            section = c.section_title or ""
+            if title not in source_titles:
+                source_titles.append(title)
+
+            # Split chunk into sentences, clean each one
+            raw_text = (c.content or "").strip()
+            sentences = re.split(r'(?<=[.!?])\s+', raw_text)
+            for s in sentences:
+                s = s.strip()
+                # Skip fragments (too short) or duplicates
+                if len(s) < 20 or s.lower() in seen_sentences:
+                    continue
+                # Skip mid-sentence fragments (don't start with uppercase or bullet)
+                if s and not s[0].isupper() and not s.startswith(("-", "•", "–")):
+                    continue
+                seen_sentences.add(s.lower())
+                extracted_facts.append((s, title, section))
+
+        # Build a clean response
+        if extracted_facts:
+            # Group by source for attribution
+            response_lines = []
+            response_lines.append(f"Based on your official onboarding documentation, here's what I found:\n")
+
+            for i, (fact, title, section) in enumerate(extracted_facts[:8]):
+                # Clean the fact: remove stray markdown artifacts and leading bullet symbols
+                clean_fact = fact.replace("**", "").replace("__", "").strip()
+                clean_fact = re.sub(r"^[•\-\*–]\s*", "", clean_fact).strip()
+                if not clean_fact:
+                    continue
+                if clean_fact.endswith(".") or clean_fact.endswith("!") or clean_fact.endswith("?"):
+                    response_lines.append(f"• {clean_fact}")
+                else:
+                    response_lines.append(f"• {clean_fact}.")
+
+            response_lines.append("")
+            sources_str = ", ".join(source_titles[:3])
+            response_lines.append(f"📄 Sources: {sources_str}")
+            response_lines.append("")
+            response_lines.append("Need more details or have follow-up questions? Just ask! I can also raise an HR ticket or connect you with a team member.")
+
+            text_response = "\n".join(response_lines)
+        else:
+            text_response = (
+                "I searched your onboarding documentation but couldn't find a specific answer to that question.\n\n"
+                "Here's what I can help you with:\n"
+                "• Company policies and employee handbook information\n"
+                "• Benefits enrollment (401k, health insurance, PTO)\n"
+                "• IT setup and laptop configuration\n"
+                "• Onboarding task tracking and checklists\n\n"
+                "Try rephrasing your question, or I can connect you with HR for personalized assistance."
+            )
+
         words = text_response.split(" ")
         for word in words:
             yield {"type": "token", "token": word + " "}

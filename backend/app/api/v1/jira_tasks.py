@@ -100,6 +100,7 @@ async def list_jira_tasks(
             time_spent_hours=t.time_spent_hours or 0.0,
             assignee_name=t.assignee.full_name if t.assignee else "Unassigned",
             reporter_name=t.reporter.full_name if t.reporter else "System",
+            extra_json=t.extra_json,
             labels=[JiraLabelRead(id=l.id, name=l.name, color=l.color) for l in t.labels],
             subtasks=[
                 JiraSubTaskRead(
@@ -138,6 +139,7 @@ async def create_jira_task(
         story_points=payload.story_points,
         category=payload.category,
         onboarding_day=payload.onboarding_day,
+        extra_json=payload.extra_json,
     )
     db.add(new_task)
     await db.flush()
@@ -329,3 +331,177 @@ async def add_comment(
         mentions=comment.mentions,
         created_at=comment.created_at,
     )
+
+
+# ─── JIRA PILLAR 3: RELEASES & VERSIONS ───
+
+@router.get("/releases/overview")
+async def get_jira_releases(db: AsyncSession = Depends(get_db)):
+    """Returns software versions, release readiness, and changelog breakdown."""
+    return [
+        {
+            "id": "rel-1",
+            "name": "v1.0.0 — Foundation & Enterprise SSO",
+            "version": "1.0.0",
+            "status": "released",
+            "release_date": "2026-09-15",
+            "progress_percent": 100,
+            "total_issues": 18,
+            "completed_issues": 18,
+            "story_points": 45,
+            "description": "Initial enterprise rollout: Azure Active Directory SSO, Intune compliance, and Contoso policy handbooks.",
+            "release_notes": [
+                "Feature: Microsoft Entra ID SAML/OIDC SSO authentication",
+                "Feature: Automatic checklist provisioning for Day 1-90",
+                "Fix: Resolved Intune MDM compliance check race condition on macOS Sequoia"
+            ]
+        },
+        {
+            "id": "rel-2",
+            "name": "v1.1.0 — Core Microservices & CI/CD Mesh",
+            "version": "1.1.0",
+            "status": "in_progress",
+            "release_date": "2026-11-15",
+            "progress_percent": 75,
+            "total_issues": 24,
+            "completed_issues": 18,
+            "story_points": 58,
+            "description": "Microservices architecture upgrade: Kafka event streaming, Teams bot integrations, and automated build pipelines.",
+            "release_notes": [
+                "Feature: Microsoft Teams Delegated Graph API meeting scheduling",
+                "Feature: Real-time cohort chat with channel broadcasting",
+                "Improvement: RAG vector retrieval hybrid lexical scoring"
+            ]
+        },
+        {
+            "id": "rel-3",
+            "name": "v2.0.0 — Zero-Trust Identity & AI Autonomous Agent",
+            "version": "2.0.0",
+            "status": "unreleased",
+            "release_date": "2027-01-30",
+            "progress_percent": 20,
+            "total_issues": 40,
+            "completed_issues": 8,
+            "story_points": 110,
+            "description": "Next-gen Autonomous AI Agent with live telephony handoff, bi-directional Jira sprint auto-grooming, and policy fine-tuning.",
+            "release_notes": [
+                "Feature: Multi-turn Voice Call Live Agent escalation",
+                "Feature: Automated Jira Sprint Retrospective insights",
+                "Security: FedRAMP High compliance telemetry enforcement"
+            ]
+        }
+    ]
+
+
+@router.post("/releases/{release_id}/deploy")
+async def deploy_release(release_id: str):
+    """Triggers simulated automated canary release pipeline."""
+    return {
+        "release_id": release_id,
+        "status": "deploying",
+        "pipeline_id": f"pipe-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "message": "Canary deployment initiated across staging and production clusters via ArgoCD.",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+# ─── JIRA PILLAR 4: SUPPORT (JIRA SERVICE MANAGEMENT) ───
+
+# In-memory support store for rapid interactive demo
+SUPPORT_TICKETS = [
+    {
+        "id": "JSM-101",
+        "key": "JSM-101",
+        "summary": "Request Elevated Production Sandbox Access for Azure Kubernetes",
+        "description": "Need contributor RBAC access to Contoso-EastUS-Aks-Prod for microservice deployment debugging.",
+        "category": "Cloud & Infrastructure",
+        "priority": "high",
+        "status": "Waiting on Support",
+        "customer": "Parth Parashar",
+        "assignee": "Elena Rostova (DevOps Lead)",
+        "created_at": "2 hours ago",
+        "sla_time_left": "1h 45m",
+        "sla_status": "within_sla",
+        "sla_target_hours": 4
+    },
+    {
+        "id": "JSM-102",
+        "key": "JSM-102",
+        "summary": "M3 MacBook Pro External 4K Display Flickering via Thunderbolt 4 Dock",
+        "description": "Dell Ultrasharp U2723QE monitor drops video signal randomly during screen sharing calls.",
+        "category": "Hardware & Equipment",
+        "priority": "medium",
+        "status": "In Progress",
+        "customer": "Alex Chen",
+        "assignee": "IT Support Desk",
+        "created_at": "4 hours ago",
+        "sla_time_left": "3h 30m",
+        "sla_status": "within_sla",
+        "sla_target_hours": 8
+    },
+    {
+        "id": "JSM-103",
+        "key": "JSM-103",
+        "summary": "Need JetBrains All-Products Pack Enterprise License Seat Provisioning",
+        "description": "Please assign a license seat for IntelliJ IDEA Ultimate and DataGrip to user corporate email.",
+        "category": "Software Licensing",
+        "priority": "low",
+        "status": "Waiting on Customer",
+        "customer": "Sarah Jenkins",
+        "assignee": "IT Procurement",
+        "created_at": "1 day ago",
+        "sla_time_left": "18h 00m",
+        "sla_status": "within_sla",
+        "sla_target_hours": 24
+    },
+    {
+        "id": "JSM-104",
+        "key": "JSM-104",
+        "summary": "VPN Certificate Expired on macOS Sequoia 15.3 Client",
+        "description": "Cannot connect to contoso-internal.vpn. Contoso GlobalProtect displays 'Certificate Expired'.",
+        "category": "Security & Network",
+        "priority": "urgent",
+        "status": "Escalated to Tier 2",
+        "customer": "Marcus Brody",
+        "assignee": "Network Security Team",
+        "created_at": "30 mins ago",
+        "sla_time_left": "45m",
+        "sla_status": "urgent_warning",
+        "sla_target_hours": 2
+    }
+]
+
+@router.get("/support/tickets")
+async def get_support_tickets():
+    return SUPPORT_TICKETS
+
+@router.post("/support/tickets")
+async def create_support_ticket(payload: dict):
+    new_ticket = {
+        "id": f"JSM-{len(SUPPORT_TICKETS) + 101}",
+        "key": f"JSM-{len(SUPPORT_TICKETS) + 101}",
+        "summary": payload.get("summary", "New IT Support Request"),
+        "description": payload.get("description", ""),
+        "category": payload.get("category", "General IT"),
+        "priority": payload.get("priority", "medium"),
+        "status": "Waiting on Support",
+        "customer": payload.get("customer", "New Employee"),
+        "assignee": "IT Support Desk",
+        "created_at": "Just now",
+        "sla_time_left": "3h 59m",
+        "sla_status": "within_sla",
+        "sla_target_hours": 4
+    }
+    SUPPORT_TICKETS.insert(0, new_ticket)
+    return new_ticket
+
+@router.patch("/support/tickets/{ticket_id}")
+async def update_support_ticket(ticket_id: str, payload: dict):
+    for t in SUPPORT_TICKETS:
+        if t["id"] == ticket_id or t["key"] == ticket_id:
+            if "status" in payload:
+                t["status"] = payload["status"]
+            if "assignee" in payload:
+                t["assignee"] = payload["assignee"]
+            return t
+    raise HTTPException(status_code=404, detail="Ticket not found")

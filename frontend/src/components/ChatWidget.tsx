@@ -32,6 +32,144 @@ interface ChatWidgetProps {
   onCallAgent?: (topic?: string) => void;
 }
 
+function FormattedMessage({ content, isUser }: { content: string; isUser?: boolean }) {
+  if (isUser) {
+    return <div className="whitespace-pre-wrap font-sans">{content}</div>;
+  }
+
+  // Parse inline markdown tokens: bold, italic, code
+  const renderInline = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={i} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("*") && part.endsWith("*")) {
+        return <em key={i} className="italic text-slate-700">{part.slice(1, -1)}</em>;
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-100 text-blue-700 font-mono text-[11px]">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return part;
+    });
+  };
+
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+  let currentList: { type: "bullet" | "number"; items: React.ReactNode[] } | null = null;
+
+  const flushList = () => {
+    if (currentList) {
+      if (currentList.type === "bullet") {
+        elements.push(
+          <ul key={`list-${elements.length}`} className="my-2 space-y-1.5 pl-0.5">
+            {currentList.items.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-slate-800">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                <span className="flex-1 leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
+        );
+      } else {
+        elements.push(
+          <ol key={`list-${elements.length}`} className="my-2 space-y-1.5 pl-1 list-decimal list-inside text-slate-800">
+            {currentList.items.map((item, idx) => (
+              <li key={idx} className="leading-relaxed">{item}</li>
+            ))}
+          </ol>
+        );
+      }
+      currentList = null;
+    }
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+
+    // Horizontal rule
+    if (trimmed === "---" || trimmed === "***") {
+      flushList();
+      elements.push(<hr key={idx} className="my-3 border-slate-200" />);
+      return;
+    }
+
+    // Bullet points (•, -, *) or numbered items
+    if (/^([•\-\*]|\d+\.)\s+/.test(trimmed)) {
+      const isNumbered = /^\d+\.\s+/.test(trimmed);
+      const listType = isNumbered ? "number" : "bullet";
+      const itemText = trimmed.replace(/^([•\-\*]|\d+\.)\s+/, "");
+
+      if (!currentList || currentList.type !== listType) {
+        flushList();
+        currentList = { type: listType, items: [] };
+      }
+      currentList.items.push(renderInline(itemText));
+      return;
+    }
+
+    // Not a list item
+    flushList();
+
+    if (!trimmed) {
+      // Empty line / paragraph break
+      elements.push(<div key={idx} className="h-1.5" />);
+      return;
+    }
+
+    // Headers
+    if (trimmed.startsWith("### ")) {
+      elements.push(
+        <h4 key={idx} className="text-xs sm:text-sm font-bold text-slate-900 mt-2.5 mb-1">
+          {renderInline(trimmed.slice(4))}
+        </h4>
+      );
+      return;
+    }
+    if (trimmed.startsWith("## ")) {
+      elements.push(
+        <h3 key={idx} className="text-sm font-bold text-slate-900 mt-3 mb-1.5">
+          {renderInline(trimmed.slice(3))}
+        </h3>
+      );
+      return;
+    }
+    if (trimmed.startsWith("# ")) {
+      elements.push(
+        <h2 key={idx} className="text-base font-bold text-slate-900 mt-3 mb-1.5">
+          {renderInline(trimmed.slice(2))}
+        </h2>
+      );
+      return;
+    }
+
+    // Source note box
+    if (trimmed.startsWith("📄 Sources:") || trimmed.startsWith("📄 Source:")) {
+      elements.push(
+        <div key={idx} className="mt-2.5 p-2 rounded-lg bg-blue-50/90 border border-blue-200/80 text-blue-900 text-[11px] font-medium flex items-center gap-1.5">
+          <span>{trimmed}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Regular paragraph
+    elements.push(
+      <p key={idx} className="text-slate-800 leading-relaxed">
+        {renderInline(trimmed)}
+      </p>
+    );
+  });
+
+  flushList();
+
+  return <div className="space-y-1 text-xs sm:text-sm">{elements}</div>;
+}
+
 export default function ChatWidget({
   token,
   currentUser,
@@ -326,6 +464,11 @@ export default function ChatWidget({
                         <Cpu className="w-3 h-3" /> Agent Action Executed
                       </span>
                     )}
+                    {msg.category === "conversation" && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                        <Sparkles className="w-3 h-3 text-purple-600" /> Assistant Greeting
+                      </span>
+                    )}
                     {msg.category === "escalate" && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-300">
                         <ShieldAlert className="w-3 h-3 text-amber-600" /> Human Escalation Triggered
@@ -349,9 +492,7 @@ export default function ChatWidget({
                       : "bg-white text-slate-900 border border-slate-200 rounded-bl-xs"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap font-sans">
-                    {msg.content}
-                  </div>
+                  <FormattedMessage content={msg.content} isUser={msg.sender === "user"} />
 
                   {/* Agent Action Card */}
                   {msg.agent_action && (
@@ -442,7 +583,7 @@ export default function ChatWidget({
                 )}
                 <div className="max-w-[88%] rounded-2xl rounded-bl-xs p-4 bg-white text-slate-900 border border-slate-200 text-xs sm:text-sm shadow-xs">
                   {streamingContent ? (
-                    <div className="whitespace-pre-wrap font-sans">{streamingContent}</div>
+                    <FormattedMessage content={streamingContent} isUser={false} />
                   ) : (
                     <div className="flex items-center gap-1.5 text-slate-500 py-1">
                       <span className="w-2 h-2 rounded-full bg-blue-600 animate-dot-1"></span>

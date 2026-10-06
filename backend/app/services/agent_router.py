@@ -42,14 +42,14 @@ class AgentRouterService:
                 api_key=settings.AZURE_OPENAI_API_KEY,
                 api_version=settings.AZURE_OPENAI_API_VERSION,
                 azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-                timeout=10.0
+                timeout=2.5
             )
             self.model_name = settings.AZURE_OPENAI_CHAT_DEPLOYMENT
             self.is_azure = True
         elif settings.OPENAI_API_KEY:
             self.client = AsyncOpenAI(
                 api_key=settings.OPENAI_API_KEY,
-                timeout=10.0
+                timeout=2.5
             )
             self.model_name = settings.OPENAI_MODEL
             self.is_azure = False
@@ -74,8 +74,50 @@ class AgentRouterService:
                 sensitivity_reason=reason
             )
 
-        lower = text.lower()
-        # Check task action patterns
+        lower = text.lower().strip()
+        words = lower.split()
+
+        # ── Conversational / small-talk check (runs FIRST) ──
+        GREETING_WORDS = {
+            "hello", "hi", "hey", "hola", "hii", "hiii", "yo", "sup",
+            "good morning", "good afternoon", "good evening", "good night",
+            "morning", "evening", "gm", "howdy",
+        }
+        THANKS_WORDS = {
+            "thanks", "thank you", "thankyou", "thx", "ty", "appreciated",
+            "thank", "cheers",
+        }
+        FAREWELL_WORDS = {
+            "bye", "goodbye", "good bye", "see you", "cya", "later", "ttyl",
+            "take care", "adios",
+        }
+        CHITCHAT_WORDS = {
+            "how are you", "how r u", "whats up", "what's up", "wassup",
+            "how's it going", "how is it going", "nice", "great", "awesome",
+            "cool", "okay", "ok", "sure", "wow", "lol", "haha", "hehe",
+            "yep", "yup", "nope", "no worries", "np", "hmm", "alright",
+        }
+        # Short message (≤ 6 words) that matches any conversational token
+        all_convo = GREETING_WORDS | THANKS_WORDS | FAREWELL_WORDS | CHITCHAT_WORDS
+        if len(words) <= 6 and any(lower.startswith(p) or p in lower for p in all_convo):
+            # Determine sub-type for response generation
+            if any(p in lower for p in GREETING_WORDS):
+                sub_type = "greeting"
+            elif any(p in lower for p in THANKS_WORDS):
+                sub_type = "thanks"
+            elif any(p in lower for p in FAREWELL_WORDS):
+                sub_type = "farewell"
+            else:
+                sub_type = "chitchat"
+            return AgentRouterDecision(
+                category="conversation",
+                confidence=0.98,
+                reasoning=f"Detected casual conversational message (sub-type: {sub_type}).",
+                detected_action=sub_type,
+                action_parameters=None,
+            )
+
+        # ── Check task action patterns ──
         for pattern, action_name in TASK_ACTION_PATTERNS:
             match = re.search(pattern, lower)
             if match:
@@ -130,7 +172,7 @@ class AgentRouterService:
         """
         start_time = time.time()
         
-        # Step 1: Deterministic fast sensitivity check
+        # Step 1: Deterministic fast sensitivity & conversation check
         is_sensitive, sensitive_reason = self.check_sensitivity(message)
         if is_sensitive:
             decision = AgentRouterDecision(
@@ -143,19 +185,27 @@ class AgentRouterService:
             self._log_decision(user_id, message, decision, time.time() - start_time)
             return decision
 
+        # Instant routing for greetings, small-talk, thanks, farewells
+        deterministic_decision = self.rule_based_fallback_classifier(message)
+        if deterministic_decision.category == "conversation":
+            self._log_decision(user_id, message, deterministic_decision, time.time() - start_time)
+            return deterministic_decision
+
         # Step 2: LLM Classification if client is available
         if self.client:
             try:
                 system_prompt = (
                     "You are the Core Agent Router for an enterprise employee onboarding assistant.\n"
-                    "Your job is to strictly classify the user's message into one of three categories:\n"
-                    "1. 'knowledge_query': The user is asking a question about company policies, benefits, IT setup, handbooks, guidelines, or contacts.\n"
-                    "2. 'task_action': The user is instructing the assistant to perform an action (e.g., mark a task as done, show checklist, raise an IT ticket, book orientation slot).\n"
-                    "3. 'escalate': The query involves sensitive matters (harassment, compensation dispute, visa/immigration, legal claims, grievances), "
+                    "Your job is to strictly classify the user's message into one of four categories:\n"
+                    "1. 'conversation': The user is sending a casual greeting, small-talk, thanks, or farewell "
+                    "(e.g., 'hello', 'how are you', 'thanks!', 'bye'). No knowledge retrieval or action needed.\n"
+                    "2. 'knowledge_query': The user is asking a question about company policies, benefits, IT setup, handbooks, guidelines, or contacts.\n"
+                    "3. 'task_action': The user is instructing the assistant to perform an action (e.g., mark a task as done, show checklist, raise an IT ticket, book orientation slot).\n"
+                    "4. 'escalate': The query involves sensitive matters (harassment, compensation dispute, visa/immigration, legal claims, grievances), "
                     "or explicit requests for a human, or is ambiguous with low confidence.\n\n"
                     "You must output ONLY valid JSON matching this schema:\n"
                     "{\n"
-                    '  "category": "knowledge_query" | "task_action" | "escalate",\n'
+                    '  "category": "conversation" | "knowledge_query" | "task_action" | "escalate",\n'
                     '  "confidence": 0.0 to 1.0,\n'
                     '  "reasoning": "brief explanation",\n'
                     '  "detected_action": "complete_task" | "list_tasks" | "raise_it_ticket" | "book_orientation" | "check_progress" | null,\n'

@@ -61,6 +61,6 @@ class Settings(BaseSettings):
     # Router & RAG Thresholds
     CONFIDENCE_THRESHOLD: float = 0.70
     TOP_K_CHUNKS: int = 4
-    SIMILARITY_THRESHOLD: float = 0.42
+    SIMILARITY_THRESHOLD: float = 0.22
 
 settings = Settings()

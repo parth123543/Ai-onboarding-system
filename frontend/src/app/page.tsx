@@ -796,7 +796,7 @@ export default function DashboardPage() {
               }`}
             >
               <Layers className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Jira Kanban Board</span>
+              <span>Jira Software (Plan • Track • Release • Support)</span>
             </button>
 
             <button

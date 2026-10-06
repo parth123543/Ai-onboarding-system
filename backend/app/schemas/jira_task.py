@@ -78,9 +78,11 @@ class JiraTaskBase(BaseModel):
     story_points: Optional[int] = None
     category: Optional[str] = "General"
     onboarding_day: Optional[int] = 1
+    extra_json: Optional[Dict[str, Any]] = None
 
 class JiraTaskCreate(JiraTaskBase):
     labels: Optional[List[str]] = []
+    extra_json: Optional[Dict[str, Any]] = None
 
 class JiraTaskUpdate(BaseModel):
     title: Optional[str] = None
