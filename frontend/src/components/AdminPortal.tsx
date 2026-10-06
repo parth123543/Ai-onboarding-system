@@ -29,7 +29,9 @@ import {
   Search,
   CheckCircle2,
   Upload,
-  X
+  X,
+  Layers,
+  Megaphone
 } from "lucide-react";
 import {
   api,
@@ -42,9 +44,10 @@ import {
 interface AdminPortalProps {
   token: string;
   onRefreshStats?: () => void;
+  onSwitchTab?: (tab: "jira" | "chat" | "onboarding") => void;
 }
 
-export default function AdminPortal({ token, onRefreshStats }: AdminPortalProps) {
+export default function AdminPortal({ token, onRefreshStats, onSwitchTab }: AdminPortalProps) {
   const [activeTab, setActiveTab] = useState<
     "joiners" | "escalations" | "templates" | "nudges" | "documents" | "questions" | "calls"
   >("joiners");
@@ -138,6 +141,46 @@ export default function AdminPortal({ token, onRefreshStats }: AdminPortalProps)
     send_sms_notification: true,
     send_email_notification: true
   });
+
+  // Announcement Broadcast Modal State & Handler
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementBody, setAnnouncementBody] = useState("");
+  const [broadcastSuccess, setBroadcastSuccess] = useState<string | null>(null);
+
+  const handleBroadcastAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcementTitle.trim() || !announcementBody.trim()) return;
+    setBroadcasting(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/enterprise/announcements", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: announcementTitle,
+          body: announcementBody
+        })
+      });
+      if (res.ok) {
+        setBroadcastSuccess("📢 Announcement published to cohort chat & dispatched to all employee emails via SendGrid!");
+        setAnnouncementTitle("");
+        setAnnouncementBody("");
+        setShowBroadcastModal(false);
+        setTimeout(() => setBroadcastSuccess(null), 6000);
+      } else {
+        alert("Failed to broadcast announcement");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error broadcasting announcement");
+    } finally {
+      setBroadcasting(false);
+    }
+  };
 
   // Overdue tasks & SendGrid state
   const [overdueTasks, setOverdueTasks] = useState<any[]>([]);
@@ -533,6 +576,79 @@ export default function AdminPortal({ token, onRefreshStats }: AdminPortalProps)
           <p className="text-[11px] text-slate-400 mt-2">Overdue tasks & open tickets</p>
         </div>
       </div>
+
+      {/* HR Command Center: Direct Working Access to Jira Software, Cohort Chat & SendGrid Announcement Broadcast */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div 
+          onClick={() => onSwitchTab?.("jira")}
+          className="bg-gradient-to-r from-indigo-900/95 via-indigo-800 to-indigo-900 text-white p-5 rounded-2xl border border-indigo-500/30 shadow-lg cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-white/10 rounded-xl">
+                <Layers className="w-5 h-5 text-indigo-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Jira Software Suite</h4>
+                <p className="text-[11px] text-indigo-200/80">Plan • Track • Release • Support</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
+          </div>
+          <p className="text-xs text-indigo-100/70 mt-3 leading-relaxed">
+            Manage Kanban sprints, estimate story points, review release readiness, and resolve JSM service tickets.
+          </p>
+        </div>
+
+        <div 
+          onClick={() => onSwitchTab?.("chat")}
+          className="bg-gradient-to-r from-purple-900/95 via-purple-800 to-purple-900 text-white p-5 rounded-2xl border border-purple-500/30 shadow-lg cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-white/10 rounded-xl">
+                <MessageSquare className="w-5 h-5 text-purple-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Cohort Chat & Teams</h4>
+                <p className="text-[11px] text-purple-200/80">Channels, DMs & Video Calls</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
+          </div>
+          <p className="text-xs text-purple-100/70 mt-3 leading-relaxed">
+            Engage with new hires across #general, schedule Microsoft Teams meetings, and direct message employees.
+          </p>
+        </div>
+
+        <div 
+          onClick={() => setShowBroadcastModal(true)}
+          className="bg-gradient-to-r from-blue-900/95 via-blue-800 to-indigo-900 text-white p-5 rounded-2xl border border-blue-500/30 shadow-lg cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-white/10 rounded-xl">
+                <Megaphone className="w-5 h-5 text-amber-300" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Broadcast Announcement</h4>
+                <p className="text-[11px] text-blue-200/80">SendGrid Email & Chat Push</p>
+              </div>
+            </div>
+            <Plus className="w-4 h-4 text-white/50 group-hover:text-white transition-all" />
+          </div>
+          <p className="text-xs text-blue-100/70 mt-3 leading-relaxed">
+            Post an official announcement that alerts all employees in chat and automatically sends SendGrid emails to their inboxes.
+          </p>
+        </div>
+      </div>
+
+      {broadcastSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fadeIn shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{broadcastSuccess}</span>
+        </div>
+      )}
 
       {/* Admin Navigation Tabs */}
       <div className="flex border-b border-slate-200 bg-white rounded-t-2xl px-4 pt-2 overflow-x-auto scrollbar-none">
@@ -2144,6 +2260,83 @@ export default function AdminPortal({ token, onRefreshStats }: AdminPortalProps)
                 {resolving ? "Resolving..." : "Mark as Resolved"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Broadcast Company Announcement & SendGrid Email Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Broadcast Company Announcement</h3>
+                  <p className="text-[11px] text-slate-500">Delivers to Cohort Chat & Sends SendGrid Emails</p>
+                </div>
+              </div>
+              <button onClick={() => setShowBroadcastModal(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleBroadcastAnnouncement} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Announcement Headline *</label>
+                <input
+                  type="text"
+                  required
+                  value={announcementTitle}
+                  onChange={(e) => setAnnouncementTitle(e.target.value)}
+                  placeholder="e.g. Q4 All-Hands Meeting & Health Insurance Enrollment Deadline"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Message Body *</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={announcementBody}
+                  onChange={(e) => setAnnouncementBody(e.target.value)}
+                  placeholder="Enter the official details, timeline, key links, and action items for all team members..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white leading-relaxed"
+                />
+              </div>
+
+              <div className="p-3 bg-indigo-50/80 border border-indigo-100 rounded-xl space-y-1.5 text-[11px] text-indigo-950">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Automated Distribution Channels:</span>
+                </div>
+                <ul className="pl-4 list-disc space-y-0.5 text-indigo-900/80">
+                  <li>Publishes to <strong>#announcements</strong> Cohort Chat channel for all employees</li>
+                  <li>Dispatches formatted HTML email to all registered employee email IDs via <strong>SendGrid</strong></li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={broadcasting}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{broadcasting ? "Broadcasting..." : "Broadcast to Everyone"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

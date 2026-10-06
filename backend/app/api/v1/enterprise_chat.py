@@ -137,6 +137,8 @@ async def send_direct_message(
     return dm
 
 # --- Announcements ---
+from app.services.email_service import email_service
+
 @router.get("/announcements", response_model=List[AnnouncementRead])
 async def list_announcements(db: AsyncSession = Depends(get_db)):
     stmt = select(Announcement).order_by(Announcement.created_at.desc())
@@ -156,6 +158,42 @@ async def create_announcement(
         read_by=[],
     )
     db.add(ann)
+
+    # Automatically post a message into the #announcements channel
+    ann_channel_res = await db.execute(select(Channel).where(Channel.name == "announcements"))
+    channel_obj = ann_channel_res.scalar_one_or_none()
+    if channel_obj:
+        chat_msg = ChannelMessage(
+            channel_id=channel_obj.id,
+            sender_id=creator_id,
+            content=f"📢 **COMPANY ANNOUNCEMENT: {payload.title}**\n\n{payload.body}",
+            extra_meta={"is_announcement": True, "announcement_title": payload.title}
+        )
+        db.add(chat_msg)
+
     await db.commit()
     await db.refresh(ann)
+
+    # Dispatch email notification to all employees via SendGrid
+    users_res = await db.execute(select(User).where(User.email.isnot(None)))
+    employees = users_res.scalars().all()
+    
+    author_name = "HR People Operations"
+    if creator_id:
+        creator_user = await db.get(User, creator_id)
+        if creator_user and creator_user.full_name:
+            author_name = creator_user.full_name
+
+    for emp in employees:
+        try:
+            await email_service.send_hr_announcement_email(
+                recipient_email=emp.email,
+                recipient_name=emp.full_name or "Colleague",
+                announcement_title=payload.title,
+                announcement_body=payload.body,
+                author_name=author_name
+            )
+        except Exception as e:
+            logger.error(f"Failed to dispatch announcement email to {emp.email}: {e}")
+
     return ann

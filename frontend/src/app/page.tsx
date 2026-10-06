@@ -812,13 +812,13 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Dynamic View: HR Admin Portal vs New Joinee Dashboard */}
-          {currentUser?.is_admin ? (
-            <AdminPortal token={token} onRefreshStats={() => loadUserData(token)} />
-          ) : mainTab === "jira" ? (
+          {/* Dynamic View: Jira Board, Cohort Chat, or Onboarding / Admin Portal */}
+          {mainTab === "jira" ? (
             <KanbanBoard />
           ) : mainTab === "chat" ? (
             <ChatRoom />
+          ) : currentUser?.is_admin ? (
+            <AdminPortal token={token} onRefreshStats={() => loadUserData(token)} onSwitchTab={(t) => setMainTab(t)} />
           ) : (
             /* ─── NEW JOINEE DASHBOARD ─── */
             <div className="space-y-6">
