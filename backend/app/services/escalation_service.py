@@ -82,7 +82,8 @@ class EscalationService:
             f"I want to make sure you get the best and most accurate support for this. "
             f"Because this involves **{summary_title}**, I have opened an HR priority ticket (**#ESC-{escalation.id[:6].upper()}**) "
             f"and attached our conversation context.\n\n"
-            f"A dedicated People Operations partner has been alerted and will reach out to you directly via Microsoft Teams or email within 2-4 business hours."
+            f"A dedicated People Operations partner has been alerted and will reach out to you directly via Microsoft Teams or email within 2-4 business hours.\n\n"
+            f"📞 **Need immediate live help?** You can connect with an agent immediately using the **'Call Assigned Support Agent Now'** button below or the **Call Agent** phone icon in the top header."
         )
 
         return escalation, response_text

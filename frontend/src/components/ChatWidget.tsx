@@ -18,7 +18,8 @@ import {
   Cpu,
   Ticket,
   Calendar,
-  Layers
+  Layers,
+  PhoneCall
 } from "lucide-react";
 import { api, ChatMessage, Citation } from "../lib/api";
 
@@ -28,6 +29,7 @@ interface ChatWidgetProps {
   onTaskUpdated?: () => void;
   isOpenDefault?: boolean;
   isFloating?: boolean;
+  onCallAgent?: (topic?: string) => void;
 }
 
 export default function ChatWidget({
@@ -36,6 +38,7 @@ export default function ChatWidget({
   onTaskUpdated,
   isOpenDefault = false,
   isFloating = true,
+  onCallAgent,
 }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(isOpenDefault);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -221,7 +224,7 @@ export default function ChatWidget({
       {/* Main Chat Drawer / Window */}
       {(isOpen || !isFloating) && (
         <div
-          className={`flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transition-all duration-300 z-50 ${
+          className={`flex flex-col bg-[#12121f] rounded-3xl shadow-2xl border border-white/10 overflow-hidden transition-all duration-300 z-50 text-white ${
             isFloating
               ? `fixed bottom-6 right-6 ${
                   isExpanded
@@ -239,7 +242,7 @@ export default function ChatWidget({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-sm leading-none">Contoso AI Assistant</h3>
+                  <h3 className="font-semibold text-sm leading-none">Launch Mate AI Assistant</h3>
                   <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded">
                     GPT-4o RAG
                   </span>
@@ -251,6 +254,16 @@ export default function ChatWidget({
             </div>
 
             <div className="flex items-center gap-1.5 text-blue-100">
+              {onCallAgent && (
+                <button
+                  type="button"
+                  onClick={() => onCallAgent()}
+                  title="Talk directly to a human onboarding agent"
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-emerald-300 flex items-center gap-1"
+                >
+                  <PhoneCall className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={handleClearHistory}
                 title="Reset conversation"
@@ -280,13 +293,13 @@ export default function ChatWidget({
           </div>
 
           {/* Quick Prompts Carousel */}
-          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 overflow-x-auto whitespace-nowrap flex gap-2 text-xs scrollbar-none">
+          <div className="px-4 py-2.5 bg-white/5 border-b border-white/10 overflow-x-auto whitespace-nowrap flex gap-2 text-xs scrollbar-none">
             {quickPrompts.map((p, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(p.query)}
                 disabled={isStreaming}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-full transition-all text-[11px] font-medium shadow-2xs shrink-0 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 rounded-full transition-all text-[11px] font-medium shadow-2xs shrink-0 disabled:opacity-50"
               >
                 {p.label}
               </button>
@@ -294,7 +307,7 @@ export default function ChatWidget({
           </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0a0a14]/60">
             {messages.map((msg, idx) => (
               <div
                 key={msg.id || idx}
@@ -351,6 +364,18 @@ export default function ChatWidget({
                         <span>System Action Result</span>
                       </div>
                       <p className="text-slate-600 text-[11px]">{msg.agent_action.message || msg.agent_action.reason}</p>
+                      {msg.agent_action.type === "escalation_created" && onCallAgent && (
+                        <div className="pt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onCallAgent(msg.agent_action?.reason || msg.content)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5" />
+                            <span>Call Assigned Support Agent Now</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -441,7 +466,7 @@ export default function ChatWidget({
           </div>
 
           {/* Input Footer */}
-          <div className="p-3 bg-white border-t border-slate-200">
+          <div className="p-3 bg-[#12121f] border-t border-white/10">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -455,20 +480,20 @@ export default function ChatWidget({
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about policies, benefits, or say 'mark MFA as done'..."
                 disabled={isStreaming}
-                className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-slate-100 hover:bg-slate-100/80 focus:bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
+                className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 focus:bg-white/15 rounded-xl border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-white/30 text-white"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isStreaming}
-                className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-xl transition-all shadow-xs active:scale-95 shrink-0"
+                className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-white/10 text-white disabled:text-white/30 rounded-xl transition-all shadow-xs active:scale-95 shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
-            <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 mt-2">
-              <span>Azure OpenAI GPT-4o • Grounded in Contoso Handbooks</span>
+            <div className="flex items-center justify-between text-[10px] text-white/40 px-1 mt-2">
+              <span>Azure OpenAI GPT-4o • Grounded in Launch Mate Handbooks</span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Online
               </span>
             </div>
           </div>

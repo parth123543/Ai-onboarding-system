@@ -29,7 +29,7 @@ class TeamsBotService:
         # Handle welcome event (conversationUpdate)
         if activity_type == "conversationUpdate":
             welcome_text = (
-                "👋 **Welcome to Microsoft Contoso!** I am your AI Onboarding Assistant.\n\n"
+                "👋 **Welcome to Microsoft Launch Mate!** I am your AI Onboarding Assistant.\n\n"
                 "You can ask me anything about your role, policies, benefits, or type **'Show my checklist'** to get started."
             )
             return self._build_teams_response(activity_data, welcome_text)

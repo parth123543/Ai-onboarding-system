@@ -6,7 +6,10 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     category: str = "General"
-    priority: str = "medium"
+    task_type: str = "general"  # general, role_specific, location_specific, hr_custom
+    priority: str = "medium"  # high, medium, low, urgent
+    mandatory: bool = True
+    reference_doc: Optional[str] = None
     due_date: Optional[datetime] = None
 
 class TaskCreate(TaskBase):
@@ -16,12 +19,15 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
+    task_type: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
+    mandatory: Optional[bool] = None
+    reference_doc: Optional[str] = None
     due_date: Optional[datetime] = None
 
 class TaskStatusUpdate(BaseModel):
-    status: str  # pending, in_progress, completed, overdue
+    status: str  # pending, in_progress, completed, overdue, cancelled
 
 class TaskResponse(TaskBase):
     id: str

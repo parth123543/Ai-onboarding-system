@@ -6,6 +6,27 @@ from app.models.chat_message import ChatMessage
 from app.models.escalation import Escalation
 from app.models.document import Document, DocumentChunk
 from app.models.nudge import NudgeRecord
+from app.models.call_request import CallRequest
+
+from app.models.jira_task import (
+    JiraTask,
+    JiraSubTask,
+    JiraTaskDependency,
+    JiraComment,
+    JiraWorkLog,
+    JiraLabel,
+    JiraAttachment,
+    JiraActivity,
+    JiraSprintBoard,
+    JiraTaskCounter,
+)
+from app.models.jira_chat import (
+    Channel,
+    ChannelMessage as JiraChannelMessage,
+    DirectMessage,
+    Announcement,
+    MessageAttachment,
+)
 
 __all__ = [
     "Base",
@@ -17,4 +38,20 @@ __all__ = [
     "Document",
     "DocumentChunk",
     "NudgeRecord",
+    "CallRequest",
+    "JiraTask",
+    "JiraSubTask",
+    "JiraTaskDependency",
+    "JiraComment",
+    "JiraWorkLog",
+    "JiraLabel",
+    "JiraAttachment",
+    "JiraActivity",
+    "JiraSprintBoard",
+    "JiraTaskCounter",
+    "Channel",
+    "JiraChannelMessage",
+    "DirectMessage",
+    "Announcement",
+    "MessageAttachment",
 ]

@@ -1,7 +1,7 @@
 # Health, Dental, Vision & Wellness Benefits Guide 2026
 
 ## Medical Insurance Plans
-Contoso provides comprehensive medical coverage starting on your first day of employment. Employees may select between two primary options:
+Launch Mate provides comprehensive medical coverage starting on your first day of employment. Employees may select between two primary options:
 - **Cigna Open Access Plus PPO:** $400 individual deductible ($800 family). $25 primary care copay, $40 specialist copay. Prescription drug coverage included with $10 generic / $35 brand formulary tiers.
 - **High Deductible Health Plan (HDHP) with HSA:** $1,600 individual deductible ($3,200 family). Eligible for a Health Savings Account (HSA) with an annual company contribution of $1,500 for individual coverage or $3,000 for family coverage.
 
@@ -15,7 +15,7 @@ Contoso provides comprehensive medical coverage starting on your first day of em
 - **Employee Assistance Program (EAP):** Confidential 24/7 counseling support for financial planning, family care, grief support, and stress management.
 
 ## 401(k) Retirement Savings & Match
-- **Employer Match:** Contoso matches 50% of your contributions up to 6% of your eligible annual compensation (effective 3% employer contribution).
+- **Employer Match:** Launch Mate matches 50% of your contributions up to 6% of your eligible annual compensation (effective 3% employer contribution).
 - **Vesting Schedule:** 100% immediate vesting on company match from Day 1. There is no multi-year cliff.
 - **Enrollment:** Administered via Fidelity NetBenefits. You can enroll, change contribution rates, or designate beneficiaries at any time through the HR Benefits portal.
 

@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 import httpx
@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models.task import Task
 from app.models.user import User
 from app.models.nudge import NudgeRecord
+from app.services.email_service import email_service
 
 logger = logging.getLogger("nudge_service")
 logger.setLevel(logging.INFO)
@@ -17,7 +18,7 @@ class NudgeService:
     async def scan_and_send_nudges(self, db: AsyncSession, simulate: bool = False) -> List[Dict[str, Any]]:
         """
         Scans for overdue or imminent onboarding tasks across all users and
-        dispatches proactive nudges via Slack and email.
+        dispatches proactive nudges via Slack and SendGrid Email.
         """
         now = datetime.now(timezone.utc)
         # Find tasks that are overdue or due within next 24 hours
@@ -58,14 +59,26 @@ class NudgeService:
             nudge = NudgeRecord(
                 user_id=user.id,
                 task_id=tasks[0].id if tasks else None,
-                channel="slack",
+                channel="email_and_slack",
                 message=message_content,
                 status="sent" if not simulate else "simulated",
                 sent_at=now
             )
             db.add(nudge)
 
-            # Slack Dispatch if configured
+            # 1. SendGrid Email Dispatch to Employee's Microsoft Corporate Account
+            primary_task = tasks[0]
+            email_res = await email_service.send_deadline_overdue_email(
+                recipient_email=user.email,
+                recipient_name=user.full_name,
+                task_title=primary_task.title,
+                due_date=primary_task.due_date,
+                category=primary_task.category,
+                priority=primary_task.priority,
+                microsoft_id=user.microsoft_id
+            )
+
+            # 2. Slack Dispatch if configured
             if settings.SLACK_WEBHOOK_URL and not simulate:
                 try:
                     async with httpx.AsyncClient() as client:
@@ -82,8 +95,10 @@ class NudgeService:
                 "event": "proactive_nudge_dispatched",
                 "user_id": user.id,
                 "user_name": user.full_name,
+                "user_email": user.email,
                 "task_count": len(tasks),
-                "channel": "slack_and_email",
+                "sendgrid_status": email_res.get("status"),
+                "channel": "sendgrid_and_slack",
                 "simulated": simulate
             }
             logger.info(json.dumps(log_payload))
@@ -94,11 +109,51 @@ class NudgeService:
                 "user_email": user.email,
                 "tasks_count": len(tasks),
                 "message": message_content,
+                "sendgrid": email_res,
                 "status": "sent" if not simulate else "simulated"
             })
 
         await db.commit()
         return nudge_results
+
+    async def notify_employee_overdue_task(self, db: AsyncSession, task_id: str) -> Dict[str, Any]:
+        """Sends targeted deadline overdue notification for a specific task."""
+        stmt = select(Task, User).join(User, Task.user_id == User.id).where(Task.id == task_id)
+        result = await db.execute(stmt)
+        row = result.first()
+        if not row:
+            return {"error": "Task or assigned user not found"}
+        task, user = row
+
+        email_res = await email_service.send_deadline_overdue_email(
+            recipient_email=user.email,
+            recipient_name=user.full_name,
+            task_title=task.title,
+            due_date=task.due_date,
+            category=task.category,
+            priority=task.priority,
+            microsoft_id=user.microsoft_id
+        )
+
+        nudge = NudgeRecord(
+            user_id=user.id,
+            task_id=task.id,
+            channel="sendgrid_email",
+            message=f"Deadline overdue notification for '{task.title}' sent to {user.email}",
+            status="sent",
+            sent_at=datetime.now(timezone.utc)
+        )
+        db.add(nudge)
+        await db.commit()
+
+        return {
+            "status": "notified",
+            "task_id": task.id,
+            "task_title": task.title,
+            "employee_name": user.full_name,
+            "employee_email": user.email,
+            "sendgrid_result": email_res
+        }
 
     async def fast_forward_demo_nudge(self, db: AsyncSession, user_id: str) -> Dict[str, Any]:
         """
@@ -116,9 +171,20 @@ class NudgeService:
             f"Need help? Just ask me in the chat widget!"
         )
 
+        # Trigger SendGrid email
+        email_res = await email_service.send_deadline_overdue_email(
+            recipient_email=user.email,
+            recipient_name=user.full_name,
+            task_title="IT Security MFA Setup & Intune MDM",
+            due_date=now + timedelta(hours=4),
+            category="IT",
+            priority="high",
+            microsoft_id=user.microsoft_id
+        )
+
         nudge = NudgeRecord(
             user_id=user.id,
-            channel="slack",
+            channel="sendgrid+slack",
             message=message,
             status="sent",
             sent_at=now
@@ -126,17 +192,13 @@ class NudgeService:
         db.add(nudge)
         await db.commit()
 
-        logger.info(json.dumps({
-            "event": "demo_nudge_triggered",
-            "user": user.full_name,
-            "channel": "slack+email"
-        }))
-
         return {
             "status": "success",
             "user_name": user.full_name,
+            "user_email": user.email,
             "message": message,
-            "channel": "Slack + Contoso Outlook Email",
+            "sendgrid": email_res,
+            "channel": "SendGrid Email + Slack",
             "timestamp": now.isoformat()
         }
 

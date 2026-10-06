@@ -1,7 +1,7 @@
 # Travel, Entertainment & Expense Reimbursement Policy
 
 ## General Expense Guidelines
-- **System of Record:** All business expenses must be submitted via SAP Concur (`https://concur.contoso.com`).
+- **System of Record:** All business expenses must be submitted via SAP Concur (`https://concur.launchmate.com`).
 - **Submission Deadline:** Expenses must be submitted with itemized receipts within 30 days of incurring the expense. Late submissions past 60 days may be rejected without reimbursement.
 - **Corporate Card:** Full-time employees are issued an American Express Corporate Card for all travel and business meals.
 

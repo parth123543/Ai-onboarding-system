@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -15,8 +15,11 @@ class Task(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     category = Column(String(50), nullable=False, default="General")  # IT, HR, Legal, Training, Team
-    status = Column(String(20), nullable=False, default="pending", index=True)  # pending, in_progress, completed, overdue
-    priority = Column(String(20), nullable=False, default="medium")  # high, medium, low
+    task_type = Column(String(50), nullable=False, default="general", index=True)  # general, role_specific, location_specific, hr_custom
+    status = Column(String(20), nullable=False, default="pending", index=True)  # pending, in_progress, completed, overdue, cancelled
+    priority = Column(String(20), nullable=False, default="medium")  # high, medium, low, urgent
+    mandatory = Column(Boolean, default=True, nullable=False)
+    reference_doc = Column(String(255), nullable=True)
     due_date = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     metadata_json = Column(JSON, nullable=True)

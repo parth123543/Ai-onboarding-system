@@ -105,12 +105,12 @@ class AgentRouterService:
                 reasoning="Identified employee knowledge query regarding company policy, IT, or handbook."
             )
 
-        # Explicit human request
-        if any(word in lower for word in ["human", "agent", "person", "representative", "manager", "help me please", "escalate"]):
+        # Explicit human / phone call request
+        if any(word in lower for word in ["human", "agent", "person", "representative", "manager", "help me please", "escalate", "call", "phone", "dial", "speak to someone", "talk to someone"]):
             return AgentRouterDecision(
                 category="escalate",
                 confidence=0.95,
-                reasoning="User explicitly requested human assistance or escalation."
+                reasoning="User explicitly requested human assistance or voice phone call."
             )
 
         # Ambiguous / Low confidence -> default to escalate

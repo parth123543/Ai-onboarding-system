@@ -2,9 +2,11 @@ import math
 import re
 import json
 import logging
+import hashlib
 from typing import List, Dict, Any, Optional, Tuple, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from openai import AsyncOpenAI, AsyncAzureOpenAI
 from app.core.config import settings
 from app.models.document import Document, DocumentChunk
@@ -137,48 +139,129 @@ class RAGService:
         title: str,
         category: str,
         source_file: str,
-        raw_text: str
-    ) -> Document:
-        """Chunks, embeds, and stores a document in the database."""
-        # Create document record
+        raw_text: str,
+        organization_id: str = "launchmate",
+        file_type: str = "text",
+        file_size: Optional[int] = None
+    ) -> Tuple[Document, bool]:
+        """
+        Chunks, embeds, and stores a document in the database with deduplication.
+        Returns (document, is_duplicate).
+        """
+        raw_bytes = raw_text.strip().encode("utf-8")
+        content_hash = hashlib.sha256(raw_bytes).hexdigest()
+        actual_size = file_size if file_size is not None else len(raw_bytes)
+
+        # 1. Deduplication check: organization_id + content_hash
+        stmt_hash = (
+            select(Document)
+            .options(selectinload(Document.chunks))
+            .where(
+                Document.organization_id == organization_id,
+                Document.content_hash == content_hash
+            )
+        )
+        existing_by_hash = (await db.execute(stmt_hash)).scalars().first()
+        if existing_by_hash:
+            logger.info(f"Duplicate document detected by hash for org '{organization_id}': '{title}' (hash: {content_hash})")
+            return existing_by_hash, True
+
+        # Check if source_file and title match existing indexed document
+        stmt_source = (
+            select(Document)
+            .options(selectinload(Document.chunks))
+            .where(
+                Document.organization_id == organization_id,
+                Document.source_file == source_file,
+                Document.title == title
+            )
+        )
+        existing_by_source = (await db.execute(stmt_source)).scalars().first()
+        if existing_by_source:
+            logger.info(f"Duplicate document detected by source/title for org '{organization_id}': '{title}'")
+            return existing_by_source, True
+
+        # 2. Create document record with status "Processing"
         doc = Document(
+            organization_id=organization_id,
             title=title,
             category=category,
-            source_file=source_file
+            source_file=source_file,
+            content_hash=content_hash,
+            file_type=file_type,
+            file_size=actual_size,
+            status="Processing",
+            chunk_count=0
         )
         db.add(doc)
         await db.flush()
 
-        chunks_data = self.chunk_text(raw_text)
-        for idx, item in enumerate(chunks_data):
-            embedding = await self.get_embedding(item["content"])
-            chunk = DocumentChunk(
-                document_id=doc.id,
-                chunk_index=idx,
-                section_title=item["section_title"],
-                content=item["content"],
-                embedding=embedding,
-                metadata_json={"words": len(item["content"].split())}
-            )
-            db.add(chunk)
+        try:
+            chunks_data = self.chunk_text(raw_text)
+            for idx, item in enumerate(chunks_data):
+                embedding = await self.get_embedding(item["content"])
+                chunk = DocumentChunk(
+                    document_id=doc.id,
+                    chunk_index=idx,
+                    section_title=item["section_title"],
+                    content=item["content"],
+                    embedding=embedding,
+                    metadata_json={"words": len(item["content"].split())}
+                )
+                db.add(chunk)
 
-        await db.commit()
-        await db.refresh(doc)
-        logger.info(f"Ingested document '{title}' with {len(chunks_data)} chunks.")
-        return doc
+            doc.chunk_count = len(chunks_data)
+            doc.status = "Successfully Indexed"
+            await db.commit()
+            
+            # Reload with chunks eagerly loaded
+            stmt_reload = select(Document).options(selectinload(Document.chunks)).where(Document.id == doc.id)
+            reloaded = (await db.execute(stmt_reload)).scalar_one()
+            logger.info(f"Successfully indexed document '{title}' for org '{organization_id}' with {len(chunks_data)} chunks.")
+            return reloaded, False
+
+        except Exception as e:
+            logger.error(f"Failed to process document '{title}': {e}")
+            doc.status = "Failed"
+            doc.error_message = str(e)
+            await db.commit()
+            await db.refresh(doc)
+            raise e
 
     async def retrieve_relevant_chunks(
         self,
         db: AsyncSession,
         query: str,
+        organization_id: str = "launchmate",
         top_k: int = 4
     ) -> List[Tuple[DocumentChunk, Document, float]]:
-        """Retrieves top-k relevant chunks based on hybrid cosine and keyword similarity."""
+        """Retrieves top-k relevant chunks based on hybrid cosine and keyword similarity for a given organization."""
         query_vec = await self.get_embedding(query)
-        query_words = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
+        stopwords = {
+            "how", "many", "what", "where", "when", "why", "who", "which",
+            "is", "are", "was", "were", "be", "been", "being",
+            "do", "does", "did", "have", "has", "had", "having",
+            "the", "a", "an", "and", "or", "but", "if", "because",
+            "as", "until", "while", "of", "at", "by", "for", "with",
+            "about", "against", "between", "into", "through", "during",
+            "before", "after", "above", "below", "to", "from", "up",
+            "down", "in", "out", "on", "off", "over", "under", "again",
+            "can", "could", "will", "would", "shall", "should", "may", "might",
+            "i", "me", "my", "myself", "we", "our", "you", "your", "get",
+            "take", "work", "use", "make", "know", "tell", "give", "find", "want", "like"
+        }
+        all_words = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
+        query_words = [w for w in all_words if w not in stopwords] or all_words
         
-        # Query all chunks and join document
-        stmt = select(DocumentChunk, Document).join(Document, DocumentChunk.document_id == Document.id)
+        # Query all chunks and join document filtered by organization_id and status
+        stmt = (
+            select(DocumentChunk, Document)
+            .join(Document, DocumentChunk.document_id == Document.id)
+            .where(
+                Document.organization_id == organization_id,
+                Document.status == "Successfully Indexed"
+            )
+        )
         result = await db.execute(stmt)
         rows = result.all()
 
@@ -188,22 +271,23 @@ class RAGService:
                 continue
             cos_score = self.cosine_similarity(query_vec, chunk.embedding)
             
-            # Hybrid lexical overlap boost
+            # Hybrid lexical overlap boost with stemming/suffix variations
             content_lower = chunk.content.lower()
             section_lower = (chunk.section_title or "").lower()
             title_lower = doc.title.lower()
 
-            matched_terms = 0
+            matched_terms = 0.0
             for term in query_words:
-                if term in section_lower:
+                stem = term.rstrip("s").rstrip("es") if len(term) > 3 else term
+                if term in section_lower or stem in section_lower:
                     matched_terms += 2.0
-                elif term in title_lower:
+                elif term in title_lower or stem in title_lower:
                     matched_terms += 1.5
-                elif term in content_lower:
+                elif term in content_lower or stem in content_lower:
                     matched_terms += 1.0
 
-            lexical_boost = min(0.40, (matched_terms / (len(query_words) * 2.0))) if query_words else 0.0
-            final_score = cos_score * 0.65 + lexical_boost * 0.35 + (0.10 if matched_terms > 1 else 0.0)
+            lexical_boost = min(0.45, (matched_terms / (max(len(query_words), 1) * 2.0))) if query_words else 0.0
+            final_score = cos_score * 0.60 + lexical_boost * 0.40 + (0.12 if matched_terms >= 2.0 else 0.0)
             
             scored.append((chunk, doc, round(final_score, 4)))
 
@@ -236,8 +320,8 @@ class RAGService:
         # If no chunks passed threshold, fail gracefully and offer escalation
         if not valid_chunks:
             fallback_msg = (
-                "I searched our official Contoso / Microsoft onboarding documentation, but I could not find a verified answer to your specific question.\n\n"
-                "To ensure you receive accurate and up-to-date guidance, I can escalate this directly to the HR Operations and People Team on your behalf, or connect you with your manager. Would you like me to open an escalation ticket?"
+                "I couldn't find this information in your organization's onboarding documents. "
+                "Would you like me to escalate this to HR?"
             )
             return fallback_msg, []
 
@@ -312,9 +396,8 @@ class RAGService:
 
         if not valid_chunks:
             fallback = (
-                "I searched our official onboarding documentation, but I could not find a verified answer to your question.\n\n"
-                "To ensure you receive accurate and up-to-date guidance, I can escalate this directly to the HR Operations and People Team on your behalf. "
-                "Would you like me to open an escalation ticket?"
+                "I couldn't find this information in your organization's onboarding documents. "
+                "Would you like me to escalate this to HR?"
             )
             for word in fallback.split(" "):
                 yield {"type": "token", "token": word + " "}

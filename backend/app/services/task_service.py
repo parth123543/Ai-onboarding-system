@@ -10,46 +10,230 @@ from app.schemas.task import TaskStatsResponse
 class TaskService:
     async def generate_tasks_for_new_joiner(self, db: AsyncSession, user: User) -> List[Task]:
         """
-        Copies matching checklist templates into the new joiner's personalized task list
-        based on role and location.
+        Dynamically generates a personalized onboarding checklist based on:
+        1. Base Onboarding Tasks (Organization standard)
+        2. Dynamic Role-Specific Tasks (Backend Engineer, Sales, HR, Product, etc. + Seniority)
+        3. Dynamic Location-Specific Tasks (Delhi in-office, Redmond, London vs. Remote work)
+        4. Reference documents grounded in the organization's RAG knowledge base
+        Preserves existing custom HR tasks and prevents duplicates.
         """
-        # Query templates matching user role or 'All', and user location or 'All'
-        stmt = select(ChecklistTemplate).where(
-            and_(
-                or_(ChecklistTemplate.role == "All", ChecklistTemplate.role.ilike(f"%{user.role}%")),
-                or_(ChecklistTemplate.location == "All", ChecklistTemplate.location.ilike(f"%{user.location}%"))
+        now = datetime.now(timezone.utc)
+
+        # 1. Fetch existing tasks to preserve custom HR tasks and prevent duplicates
+        existing_stmt = select(Task).where(Task.user_id == user.id)
+        existing_tasks = (await db.execute(existing_stmt)).scalars().all()
+        existing_titles = {t.title.lower().strip() for t in existing_tasks}
+
+        # 2. Query available company documents to ground reference docs
+        from app.models.document import Document
+        docs_stmt = select(Document).where(Document.organization_id == (user.organization_id or "launchmate"))
+        available_docs = (await db.execute(docs_stmt)).scalars().all()
+        doc_map = {d.title.lower(): d.title for d in available_docs}
+
+        def resolve_ref_doc(suggested_title: Optional[str]) -> Optional[str]:
+            if not suggested_title:
+                return None
+            suggested_lower = suggested_title.lower()
+            for k, real_title in doc_map.items():
+                if suggested_lower in k or k in suggested_lower:
+                    return real_title
+            return suggested_title
+
+        tasks_to_create = []
+
+        # ─── LAYER 1: BASE ONBOARDING TASKS (General) ───
+        base_stmt = select(ChecklistTemplate).where(
+            or_(
+                ChecklistTemplate.template_type == "base",
+                and_(ChecklistTemplate.role == "All", ChecklistTemplate.location == "All")
             )
         ).order_by(ChecklistTemplate.due_days_from_hire.asc())
+        base_templates = (await db.execute(base_stmt)).scalars().all()
 
-        result = await db.execute(stmt)
-        templates = result.scalars().all()
-
-        now = datetime.now(timezone.utc)
-        created_tasks = []
-
-        for template in templates:
-            due_date = now + timedelta(days=template.due_days_from_hire)
-            task = Task(
+        for tpl in base_templates:
+            norm_title = tpl.title.lower().strip()
+            if norm_title in existing_titles:
+                continue
+            existing_titles.add(norm_title)
+            due_date = now + timedelta(days=tpl.due_days_from_hire)
+            tasks_to_create.append(Task(
                 user_id=user.id,
-                title=template.title,
-                description=template.description,
-                category=template.category,
-                priority=template.priority,
+                title=tpl.title,
+                description=tpl.description,
+                category=tpl.category or "General",
+                task_type="general",
+                priority=tpl.priority or "high",
+                mandatory=tpl.mandatory if hasattr(tpl, 'mandatory') else True,
+                reference_doc=resolve_ref_doc(tpl.reference_doc),
                 status="pending",
                 due_date=due_date,
                 metadata_json={
-                    "template_id": template.id,
-                    "target_role": template.role,
-                    "target_location": template.location
+                    "layer": "base",
+                    "template_id": tpl.id,
+                    "target_role": "All"
                 }
-            )
-            db.add(task)
-            created_tasks.append(task)
+            ))
 
-        await db.commit()
-        for t in created_tasks:
-            await db.refresh(t)
-        return created_tasks
+        # ─── LAYER 2: DYNAMIC ROLE-SPECIFIC TASKS ───
+        user_role_lower = (user.role or "").lower()
+        user_dept_lower = (user.department or "").lower()
+
+        # Query all role-specific templates
+        role_stmt = select(ChecklistTemplate).where(
+            ChecklistTemplate.template_type == "role"
+        ).order_by(ChecklistTemplate.due_days_from_hire.asc())
+        role_templates = (await db.execute(role_stmt)).scalars().all()
+
+        matching_role_templates = []
+        for tpl in role_templates:
+            tpl_role = tpl.role.lower()
+            tpl_dept = tpl.department.lower()
+            if tpl_role != "all" and (tpl_role in user_role_lower or user_role_lower in tpl_role):
+                matching_role_templates.append(tpl)
+            elif tpl_dept != "all" and (tpl_dept in user_dept_lower or user_dept_lower in tpl_dept):
+                matching_role_templates.append(tpl)
+
+        # Fallback role generation if no pre-seeded template matched the custom role title
+        if not matching_role_templates:
+            if "engineer" in user_role_lower or "developer" in user_role_lower or "tech" in user_role_lower:
+                role_alias = "Backend Engineer"
+            elif "sales" in user_role_lower or "account" in user_role_lower or "business dev" in user_role_lower:
+                role_alias = "Sales Employee"
+            elif "hr" in user_role_lower or "people" in user_role_lower or "talent" in user_role_lower:
+                role_alias = "HR Employee"
+            elif "product" in user_role_lower:
+                role_alias = "Product Manager"
+            else:
+                role_alias = "General"
+
+            for tpl in role_templates:
+                if tpl.role.lower() == role_alias.lower():
+                    matching_role_templates.append(tpl)
+
+        for tpl in matching_role_templates:
+            norm_title = tpl.title.lower().strip()
+            if norm_title in existing_titles:
+                continue
+            existing_titles.add(norm_title)
+            due_date = now + timedelta(days=tpl.due_days_from_hire)
+            tasks_to_create.append(Task(
+                user_id=user.id,
+                title=tpl.title,
+                description=tpl.description,
+                category=tpl.category or "IT",
+                task_type="role_specific",
+                priority=tpl.priority or "high",
+                mandatory=tpl.mandatory if hasattr(tpl, 'mandatory') else True,
+                reference_doc=resolve_ref_doc(tpl.reference_doc),
+                status="pending",
+                due_date=due_date,
+                metadata_json={
+                    "layer": "role_specific",
+                    "template_id": tpl.id,
+                    "target_role": user.role
+                }
+            ))
+
+        # Experience level / seniority customization
+        exp_level = (getattr(user, "experience_level", "Mid-Level") or "Mid-Level").lower()
+        if any(keyword in exp_level for keyword in ["senior", "lead", "principal", "director", "executive"]):
+            leadership_title = f"{user.role} Architecture & Strategic Roadmap Alignment"
+            if leadership_title.lower() not in existing_titles:
+                existing_titles.add(leadership_title.lower())
+                tasks_to_create.append(Task(
+                    user_id=user.id,
+                    title=leadership_title,
+                    description=f"Meet with department leadership and cross-functional teams to align on strategic architecture, quarterly OKRs, and mentoring responsibilities for your {user.role} role.",
+                    category="Team",
+                    task_type="role_specific",
+                    priority="high",
+                    mandatory=True,
+                    reference_doc=resolve_ref_doc("Launch Mate Employee Handbook (2026 Edition)"),
+                    status="pending",
+                    due_date=now + timedelta(days=5),
+                    metadata_json={
+                        "layer": "seniority_specific",
+                        "experience_level": user.experience_level
+                    }
+                ))
+
+        # ─── LAYER 2 (cont'd): DYNAMIC LOCATION-SPECIFIC TASKS ───
+        user_loc_lower = (user.location or "").lower()
+        is_remote = any(keyword in user_loc_lower for keyword in ["remote", "wfh", "virtual", "home"])
+
+        loc_stmt = select(ChecklistTemplate).where(
+            ChecklistTemplate.template_type == "location"
+        ).order_by(ChecklistTemplate.due_days_from_hire.asc())
+        loc_templates = (await db.execute(loc_stmt)).scalars().all()
+
+        matching_loc_templates = []
+        if is_remote:
+            for tpl in loc_templates:
+                if "remote" in tpl.location.lower():
+                    matching_loc_templates.append(tpl)
+        else:
+            for tpl in loc_templates:
+                tpl_loc = tpl.location.lower()
+                # Check for Delhi, Redmond, London, etc.
+                if tpl_loc != "all" and (tpl_loc in user_loc_lower or any(word in user_loc_lower for word in tpl_loc.split(","))):
+                    matching_loc_templates.append(tpl)
+
+            # If user has an in-office location not in pre-seeded templates, add standard facility task
+            if not matching_loc_templates:
+                generic_loc_title = f"{user.location} Campus Facility Access & Local IT Setup"
+                if generic_loc_title.lower() not in existing_titles:
+                    existing_titles.add(generic_loc_title.lower())
+                    tasks_to_create.append(Task(
+                        user_id=user.id,
+                        title=generic_loc_title,
+                        description=f"Visit reception at the {user.location} office to collect your security badge, inspect local desk equipment, and configure Wi-Fi access.",
+                        category="General",
+                        task_type="location_specific",
+                        priority="high",
+                        mandatory=True,
+                        reference_doc=resolve_ref_doc("IT Security, Hardware Provisioning & Remote Access Guide"),
+                        status="pending",
+                        due_date=now + timedelta(days=2),
+                        metadata_json={
+                            "layer": "location_specific",
+                            "location": user.location
+                        }
+                    ))
+
+        for tpl in matching_loc_templates:
+            norm_title = tpl.title.lower().strip()
+            if norm_title in existing_titles:
+                continue
+            existing_titles.add(norm_title)
+            due_date = now + timedelta(days=tpl.due_days_from_hire)
+            tasks_to_create.append(Task(
+                user_id=user.id,
+                title=tpl.title,
+                description=tpl.description,
+                category=tpl.category or "General",
+                task_type="location_specific",
+                priority=tpl.priority or "high",
+                mandatory=tpl.mandatory if hasattr(tpl, 'mandatory') else True,
+                reference_doc=resolve_ref_doc(tpl.reference_doc),
+                status="pending",
+                due_date=due_date,
+                metadata_json={
+                    "layer": "location_specific",
+                    "template_id": tpl.id,
+                    "target_location": user.location
+                }
+            ))
+
+        # Add all new tasks
+        for task in tasks_to_create:
+            db.add(task)
+
+        if tasks_to_create:
+            await db.commit()
+
+        # Return full updated list of tasks for the user
+        all_user_tasks = await self.get_user_tasks(db, user.id)
+        return all_user_tasks
 
     async def get_user_tasks(
         self,

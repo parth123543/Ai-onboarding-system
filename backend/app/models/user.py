@@ -16,8 +16,13 @@ class User(Base):
     role = Column(String(100), nullable=False, default="Software Engineer")
     department = Column(String(100), nullable=False, default="Engineering")
     location = Column(String(100), nullable=False, default="Redmond, WA")
+    experience_level = Column(String(50), nullable=False, default="Mid-Level")  # Junior, Mid-Level, Senior, Lead, Executive
     is_admin = Column(Boolean, default=False, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)
+    phone_number = Column(String(50), nullable=True, index=True)
+    auth_provider = Column(String(50), nullable=False, default="email")  # email, google, microsoft, phone
+    organization_id = Column(String(50), nullable=False, default="launchmate", index=True)
+    microsoft_id = Column(String(255), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 

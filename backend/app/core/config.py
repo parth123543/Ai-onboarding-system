@@ -40,11 +40,20 @@ class Settings(BaseSettings):
     
     # Email / SendGrid Integration
     SENDGRID_API_KEY: Optional[str] = os.getenv("SENDGRID_API_KEY", None)
-    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "onboarding@contoso.microsoft.com")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "onboarding@launchmate.microsoft.com")
     
-    # Microsoft Bot Framework / Teams
+    # Microsoft Graph / Teams Integration (Delegated OAuth)
+    MICROSOFT_TENANT_ID: Optional[str] = os.getenv("MICROSOFT_TENANT_ID", "2c5bdaf4-8ff2-4bd9-bd54-7c50ab219590")
+    MICROSOFT_CLIENT_ID: Optional[str] = os.getenv("MICROSOFT_CLIENT_ID", "0a2a8f7a-7986-4c8d-8a5d-205fcb20478b")
+    MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET", "f1e473c6-7906-431b-95c6-616b57bc9043")
+    MICROSOFT_REDIRECT_URI: str = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:3000/api/auth/teams/callback")
     MICROSOFT_APP_ID: Optional[str] = os.getenv("MICROSOFT_APP_ID", None)
     MICROSOFT_APP_PASSWORD: Optional[str] = os.getenv("MICROSOFT_APP_PASSWORD", None)
+
+    # Live Agent Phone Lines (Dedicated Lines with Dynamic Assignment)
+    SUPPORT_PHONE_1: str = os.getenv("SUPPORT_PHONE_1", "+91 9772835979")
+    SUPPORT_PHONE_2: str = os.getenv("SUPPORT_PHONE_2", "+91 8529782946")
+    SUPPORT_PHONE_3: str = os.getenv("SUPPORT_PHONE_3", "+91 9772835979")
 
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "*"]
@@ -52,6 +61,6 @@ class Settings(BaseSettings):
     # Router & RAG Thresholds
     CONFIDENCE_THRESHOLD: float = 0.70
     TOP_K_CHUNKS: int = 4
-    SIMILARITY_THRESHOLD: float = 0.25
+    SIMILARITY_THRESHOLD: float = 0.42
 
 settings = Settings()

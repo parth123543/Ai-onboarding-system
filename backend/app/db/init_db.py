@@ -54,7 +54,7 @@ INITIAL_TEMPLATES = [
         "location": "All",
         "department": "All",
         "title": "Complete Mandatory Standards of Business Conduct Training",
-        "description": "45-minute online interactive course on Contoso Learning covering compliance and anti-harassment.",
+        "description": "45-minute online interactive course on Launch Mate Learning covering compliance and anti-harassment.",
         "category": "Legal",
         "due_days_from_hire": 4,
         "priority": "high",
@@ -100,7 +100,7 @@ INITIAL_TEMPLATES = [
         "location": "All",
         "department": "Engineering",
         "title": "Request GitHub Enterprise & Azure Subscription Access",
-        "description": "Join github.com/contoso-org using corporate SSO and register your Ed25519 SSH key.",
+        "description": "Join github.com/launchmate-org using corporate SSO and register your Ed25519 SSH key.",
         "category": "IT",
         "due_days_from_hire": 2,
         "priority": "high",
@@ -189,28 +189,10 @@ DEMO_USERS = [
         "password": "Password123!"
     },
     {
-        "email": "sarah.chen@microsoft.com",
-        "full_name": "Sarah Chen",
+        "email": "346789@gmail.com",
+        "full_name": "Parth parashar",
         "role": "Software Engineer",
         "department": "Engineering",
-        "location": "Redmond, WA",
-        "is_admin": False,
-        "password": "Password123!"
-    },
-    {
-        "email": "alex.rivera@microsoft.com",
-        "full_name": "Alex Rivera",
-        "role": "Product Manager",
-        "department": "Product & AI",
-        "location": "London, UK",
-        "is_admin": False,
-        "password": "Password123!"
-    },
-    {
-        "email": "priya.sharma@microsoft.com",
-        "full_name": "Priya Sharma",
-        "role": "Software Engineer",
-        "department": "Core AI & Search",
         "location": "Redmond, WA",
         "is_admin": False,
         "password": "Password123!"
@@ -288,6 +270,87 @@ async def init_db():
                     raw_text=content
                 )
             logger.info("Completed RAG documentation indexing.")
+
+        # Seed initial Jira tasks and Chat channels
+        from app.models.jira_task import JiraTask, JiraTaskCounter, JiraLabel
+        from app.models.jira_chat import Channel, ChannelMessage, Announcement
+
+        ch_res = await session.execute(select(Channel).limit(1))
+        if not ch_res.scalar_one_or_none():
+            logger.info("Seeding Enterprise Chat channels and announcements...")
+            gen_ch = Channel(name="general", description="General company discussion and cohort chats", is_announcement=False)
+            ann_ch = Channel(name="announcements", description="Official HR broadcasts and leadership townhalls", is_announcement=True)
+            tech_ch = Channel(name="it-support", description="Hardware provisioning, MFA setups, and VPN troubleshooting", is_announcement=False)
+            session.add_all([gen_ch, ann_ch, tech_ch])
+            await session.flush()
+
+            # Add welcome announcement
+            ann = Announcement(
+                title="Welcome to Microsoft LaunchMate 2026 Cohort! 🚀",
+                body="We are thrilled to welcome our newest engineers to the Redmond & Global engineering hub. Please complete Day-1 checklist items and join the Virtual Orientation.",
+                read_by=[]
+            )
+            session.add(ann)
+
+            # Seed initial Jira Board tasks
+            jt_res = await session.execute(select(JiraTask).limit(1))
+            if not jt_res.scalar_one_or_none():
+                logger.info("Seeding Jira-grade Sprint Board tasks...")
+                counter = JiraTaskCounter(project_key="LM", last_num=4)
+                session.add(counter)
+
+                t1 = JiraTask(
+                    key="LM-1",
+                    title="Setup Azure AD SSO & Microsoft Authenticator MFA",
+                    description="Download Microsoft Authenticator on iOS/Android and enroll device via aka.ms/mfasetup.",
+                    type="task",
+                    status="in_progress",
+                    priority="urgent",
+                    sla_hours=24,
+                    story_points=2,
+                    onboarding_day=1,
+                    category="IT",
+                )
+                t2 = JiraTask(
+                    key="LM-2",
+                    title="Hardware Provisioning: M3 MacBook Max / ThinkPad X1 Carbon",
+                    description="Verify FileVault disk encryption and Intune MDM compliance policies with IT Helpdesk.",
+                    type="task",
+                    status="done",
+                    priority="high",
+                    sla_hours=48,
+                    story_points=3,
+                    onboarding_day=1,
+                    category="IT",
+                    completed_at=datetime.now(timezone.utc),
+                )
+                t3 = JiraTask(
+                    key="LM-3",
+                    title="Attend Virtual Orientation & Executive Keynote",
+                    description="Join Microsoft Teams live stream with Executive Leadership and People Team.",
+                    type="story",
+                    status="todo",
+                    priority="high",
+                    sla_hours=72,
+                    story_points=1,
+                    onboarding_day=2,
+                    category="Training",
+                )
+                t4 = JiraTask(
+                    key="LM-4",
+                    title="Code of Conduct & NDA Compliance Sign-off",
+                    description="Review Standards of Business Conduct and complete digital signature in Workday.",
+                    type="task",
+                    status="in_review",
+                    priority="medium",
+                    sla_hours=96,
+                    story_points=1,
+                    onboarding_day=3,
+                    category="Legal",
+                )
+                session.add_all([t1, t2, t3, t4])
+            await session.commit()
+            logger.info("Seeded Jira tasks and Chat channels successfully.")
 
 if __name__ == "__main__":
     import asyncio

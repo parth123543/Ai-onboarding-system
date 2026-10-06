@@ -10,7 +10,7 @@ async def test_chunking_logic():
         "## Health Plan Details\n\n"
         + "Employees receive dental, vision, and prescription coverage. " * 30 + "\n\n"
         "## Retirement Match\n\n"
-        + "Contoso matches 50% of your contributions up to 6%. " * 20
+        + "Launch Mate matches 50% of your contributions up to 6%. " * 20
     )
     chunks = rag_service.chunk_text(sample_markdown, chunk_size=40, overlap=5)
     assert len(chunks) >= 2

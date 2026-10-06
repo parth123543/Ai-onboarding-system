@@ -6,12 +6,15 @@ class ChecklistTemplateBase(BaseModel):
     role: str = "All"
     location: str = "All"
     department: str = "All"
+    template_type: str = "role"  # base, role, location
     title: str
     description: Optional[str] = None
     category: str = "General"
     due_days_from_hire: int = 3
     required: bool = True
-    priority: str = "medium"
+    mandatory: bool = True
+    priority: str = "medium"  # high, medium, low, urgent
+    reference_doc: Optional[str] = None
 
 class ChecklistTemplateCreate(ChecklistTemplateBase):
     pass

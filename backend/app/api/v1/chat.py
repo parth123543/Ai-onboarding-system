@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import List, Optional, Any
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,7 +78,8 @@ async def chat_turn(
         agent_action_data = action_result
 
     else:  # knowledge_query
-        chunks = await rag_service.retrieve_relevant_chunks(db, chat_in.content)
+        user_org = getattr(current_user, "organization_id", "launchmate") or "launchmate"
+        chunks = await rag_service.retrieve_relevant_chunks(db, chat_in.content, organization_id=user_org)
         reply_content, citations = await rag_service.generate_grounded_answer(chat_in.content, chunks)
         citations_data = [c.model_dump() for c in citations]
 
@@ -165,7 +167,12 @@ async def chat_stream(
                 sensitivity_reason=decision.sensitivity_reason
             )
             full_response = reply
-            action_data = {"type": "escalation", "ticket_id": esc.id[:6].upper()}
+            action_data = {
+                "type": "escalation_created",
+                "ticket_id": esc.id[:6].upper(),
+                "reason": esc.reason,
+                "message": f"Priority Human Escalation #{esc.id[:6].upper()} opened."
+            }
             yield f"data: {json.dumps({'type': 'action', 'action': action_data})}\n\n"
             for word in reply.split(" "):
                 yield f"data: {json.dumps({'type': 'token', 'token': word + ' '})}\n\n"
@@ -184,7 +191,8 @@ async def chat_stream(
                 yield f"data: {json.dumps({'type': 'token', 'token': word + ' '})}\n\n"
 
         else:  # knowledge_query -> stream RAG answer
-            chunks = await rag_service.retrieve_relevant_chunks(db, message)
+            user_org = getattr(user, "organization_id", "launchmate") or "launchmate"
+            chunks = await rag_service.retrieve_relevant_chunks(db, message, organization_id=user_org)
             async for sse_event in rag_service.stream_grounded_answer(message, chunks):
                 if sse_event["type"] == "token":
                     full_response += sse_event["token"]
@@ -273,3 +281,34 @@ async def teams_bot_webhook(
     body = await request.json()
     response_activity = await teams_bot_service.process_activity(db, body)
     return response_activity
+
+class DirectEscalationRequest(BaseModel):
+    reason: str = "User Reported Issue"
+    summary: str
+    priority: str = "high"
+
+@router.post("/escalate")
+async def report_issue_or_escalate(
+    req: DirectEscalationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Allows a new joinee to report an issue or directly escalate a concern to HR.
+    Immediately creates a priority ticket in the HR Admin portal.
+    """
+    esc, reply_content = await escalation_service.create_escalation(
+        db=db,
+        user=current_user,
+        conversation_id="direct_issue_report",
+        reason=req.reason,
+        trigger_message=req.summary,
+        sensitivity_reason=req.reason
+    )
+    return {
+        "status": "escalated",
+        "escalation_id": esc.id,
+        "priority": esc.priority,
+        "message": "Your issue has been reported and escalated to the HR & Operations team. An HR representative will reach out shortly."
+    }
+
