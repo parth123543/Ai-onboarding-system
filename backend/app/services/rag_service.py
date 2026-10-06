@@ -438,12 +438,18 @@ class RAGService:
             except Exception as e:
                 logger.warning(f"Streaming failed: {e}. Using token simulation.")
 
-        # Offline streaming simulation
-        top_chunk, top_doc, _ = valid_chunks[0]
+        # Grounded multi-chunk policy synthesis
+        answer_parts = []
+        for c, d, _ in valid_chunks[:3]:
+            sec = f" (*{c.section_title}*)" if c.section_title else ""
+            answer_parts.append(f"**From {d.title}{sec}:**\n{c.content}")
+        
+        grounded_body = "\n\n".join(answer_parts)
         text_response = (
-            f"According to **{top_doc.title}** (*{top_chunk.section_title}*):\n\n"
-            f"{top_chunk.content}\n\n"
-            f"**Citations:**\n- [{top_doc.title} - {top_chunk.section_title}]"
+            f"Here is the verified information from your official onboarding documentation:\n\n"
+            f"{grounded_body}\n\n"
+            f"---\n"
+            f"💡 *Need further assistance or personal exceptions? You can ask me to raise an HR ticket or request an agent call anytime.*"
         )
         words = text_response.split(" ")
         for word in words:

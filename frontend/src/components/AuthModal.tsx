@@ -107,16 +107,12 @@ export default function AuthModal({ isOpen = true, onClose, onSuccess }: AuthMod
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
+
     try {
-      const { user, session, needsEmailConfirmation } = await auth.signUpWithEmail(email, password, {
-        full_name: fullName,
-        phone: phoneNumber || undefined,
-        role,
-        work_location: location,
-        department,
-      });
+      // 1. Register in backend database immediately (generates personalized checklist & JWT)
+      let backendRes: any = null;
       try {
-        const backendRes = await api.signup({
+        backendRes = await api.signup({
           email: email.trim().toLowerCase(),
           password,
           full_name: fullName,
@@ -126,24 +122,42 @@ export default function AuthModal({ isOpen = true, onClose, onSuccess }: AuthMod
           phone_number: phoneNumber || undefined,
           is_admin: false,
         });
-        if (backendRes.access_token) {
-          if (typeof window !== "undefined") {
-            localStorage.setItem("launchmate_auth_token", backendRes.access_token);
-            localStorage.setItem("launchmate_user_id", backendRes.user.id);
-          }
-          onSuccess(backendRes.user, backendRes.access_token);
-          onClose();
+      } catch (beErr: any) {
+        // If email already exists in backend, tell user to login
+        if (beErr?.message?.includes("already exists")) {
+          setError("An account with this email already exists. Please switch to the Sign In tab.");
+          setLoading(false);
           return;
         }
-      } catch (beErr) {
-        console.warn("Backend signup sync note:", beErr);
+        console.warn("Backend signup call:", beErr);
       }
-      if (needsEmailConfirmation) {
-        setSuccessMessage("🎉 Account created! Check your email inbox to verify your address, then sign in.");
-      } else if (user && session) {
-        onSuccess(toApiUser(user, { full_name: fullName, role, department, location }), session.access_token);
+
+      // 2. Also register in Supabase Auth
+      try {
+        await auth.signUpWithEmail(email, password, {
+          full_name: fullName,
+          phone: phoneNumber || undefined,
+          role,
+          work_location: location,
+          department,
+        });
+      } catch (supaErr: any) {
+        console.warn("Supabase signup note:", supaErr);
+      }
+
+      // 3. If backend created the account successfully, log them in immediately!
+      if (backendRes?.access_token) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("launchmate_auth_token", backendRes.access_token);
+          localStorage.setItem("launchmate_user_id", backendRes.user.id);
+        }
+        onSuccess(backendRes.user, backendRes.access_token);
         onClose();
+        return;
       }
+
+      setSuccessMessage("🎉 Account created! You can now sign in with your credentials.");
+      setTab("login");
     } catch (err: any) {
       setError(err.message || "Registration failed. Try again.");
     } finally {
