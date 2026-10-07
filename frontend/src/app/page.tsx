@@ -33,7 +33,8 @@ import {
   LifeBuoy,
   Briefcase,
   BookOpen,
-  PlayCircle
+  PlayCircle,
+  CheckSquare
 } from "lucide-react";
 import { api, User, Task, TaskStats } from "../lib/api";
 import ChatWidget from "../components/ChatWidget";
@@ -42,6 +43,7 @@ import AuthModal from "../components/AuthModal";
 import CallAgentModal from "../components/CallAgentModal";
 import KanbanBoard from "../components/KanbanBoard";
 import ChatRoom from "../components/ChatRoom";
+import PersonalTodoList from "../components/PersonalTodoList";
 
 import { useAuth } from "../context/AuthContext";
 
@@ -58,7 +60,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   
   // Navigation & Feature Tabs
-  const [mainTab, setMainTab] = useState<"onboarding" | "jira" | "chat">("onboarding");
+  const [mainTab, setMainTab] = useState<"onboarding" | "todo" | "jira" | "chat">("onboarding");
   
   // Day / Milestone Filter state
   const [dayFilter, setDayFilter] = useState<string>("All");
@@ -788,6 +790,18 @@ export default function DashboardPage() {
             </button>
 
             <button
+              onClick={() => setMainTab("todo")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                mainTab === "todo"
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/30"
+                  : "bg-white/5 hover:bg-white/10 text-white/60"
+              }`}
+            >
+              <CheckSquare className="w-3.5 h-3.5 text-emerald-300" />
+              <span>To-Do List (Individual)</span>
+            </button>
+
+            <button
               onClick={() => setMainTab("jira")}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 mainTab === "jira"
@@ -812,8 +826,14 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Dynamic View: Jira Board, Cohort Chat, or Onboarding / Admin Portal */}
-          {mainTab === "jira" ? (
+          {/* Dynamic View: Personal To-Do, Work Hub, Cohort Chat, or Onboarding / Admin Portal */}
+          {mainTab === "todo" ? (
+            <PersonalTodoList 
+              token={token} 
+              tasks={tasks} 
+              onRefreshTasks={() => loadUserData(token)}
+            />
+          ) : mainTab === "jira" ? (
             <KanbanBoard />
           ) : mainTab === "chat" ? (
             <ChatRoom currentUser={currentUser} />

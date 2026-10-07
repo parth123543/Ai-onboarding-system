@@ -44,7 +44,7 @@ import {
 interface AdminPortalProps {
   token: string;
   onRefreshStats?: () => void;
-  onSwitchTab?: (tab: "jira" | "chat" | "onboarding") => void;
+  onSwitchTab?: (tab: "jira" | "chat" | "onboarding" | "todo") => void;
 }
 
 export default function AdminPortal({ token, onRefreshStats, onSwitchTab }: AdminPortalProps) {

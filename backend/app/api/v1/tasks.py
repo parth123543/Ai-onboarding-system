@@ -42,8 +42,10 @@ async def create_task(
         user_id=current_user.id,
         title=task_in.title,
         description=task_in.description,
-        category=task_in.category,
-        priority=task_in.priority,
+        category=task_in.category or "Personal",
+        task_type=task_in.task_type or "personal",
+        priority=task_in.priority or "medium",
+        mandatory=task_in.mandatory if task_in.mandatory is not None else False,
         due_date=task_in.due_date,
         status="pending"
     )
@@ -75,6 +77,53 @@ async def update_task_status(
             detail="Task not found or access denied"
         )
     return TaskResponse.model_validate(task)
+
+@router.patch("/{task_id}", response_model=TaskResponse)
+async def update_task(
+    task_id: str,
+    task_in: TaskUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Updates an existing personal or onboarding task."""
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Task not found or access denied")
+    
+    if task_in.title is not None:
+        task.title = task_in.title
+    if task_in.description is not None:
+        task.description = task_in.description
+    if task_in.category is not None:
+        task.category = task_in.category
+    if task_in.priority is not None:
+        task.priority = task_in.priority
+    if task_in.due_date is not None:
+        task.due_date = task_in.due_date
+    if task_in.status is not None:
+        task.status = task_in.status
+        from datetime import datetime, timezone
+        if task_in.status == "completed":
+            task.completed_at = datetime.now(timezone.utc)
+        elif task.completed_at:
+            task.completed_at = None
+
+    await db.commit()
+    await db.refresh(task)
+    return TaskResponse.model_validate(task)
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> None:
+    """Deletes an individual task."""
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Task not found or access denied")
+    await db.delete(task)
+    await db.commit()
 
 @router.post("/regenerate", response_model=List[TaskResponse])
 async def regenerate_user_checklist(
