@@ -1,0 +1,123 @@
+[
+  {
+    "id": "c3ca1547231e45e9a8806b1f18cd106f",
+    "key": "LM-1",
+    "title": "Setup Azure AD SSO & Microsoft Authenticator MFA",
+    "status": "in_progress",
+    "priority": "urgent",
+    "type": "task",
+    "story_points": 2,
+    "category": "IT",
+    "extra_json": null
+  },
+  {
+    "id": "6b0f6217547f477a8c412a4f721fe459",
+    "key": "LM-2",
+    "title": "Hardware Provisioning: M3 MacBook Max / ThinkPad X1 Carbon",
+    "status": "done",
+    "priority": "high",
+    "type": "task",
+    "story_points": 3,
+    "category": "IT",
+    "extra_json": null
+  },
+  {
+    "id": "e48082acbec94767a6591a69a5de8e73",
+    "key": "LM-3",
+    "title": "Attend Virtual Orientation & Executive Keynote",
+    "status": "todo",
+    "priority": "high",
+    "type": "story",
+    "story_points": 1,
+    "category": "Training",
+    "extra_json": null
+  },
+  {
+    "id": "6e9011618a504091877b24ec62e6c8b8",
+    "key": "LM-4",
+    "title": "Code of Conduct & NDA Compliance Sign-off",
+    "status": "in_review",
+    "priority": "medium",
+    "type": "task",
+    "story_points": 1,
+    "category": "Legal",
+    "extra_json": null
+  },
+  {
+    "id": "9d0100d752294594aa4cc7d199a5931d",
+    "key": "LM-5",
+    "title": "Provision Local Kubernetes Cluster (Minikube / Kind) & Microservices Mesh",
+    "status": "in_progress",
+    "priority": "high",
+    "type": "story",
+    "story_points": 5,
+    "category": "DevOps",
+    "extra_json": "{\"sprint\": \"Sprint 1 (Active)\", \"epic\": \"Cloud Platform\", \"release\": \"v1.1.0\"}"
+  },
+  {
+    "id": "823e8eb17c3541508198cc3c1f401181",
+    "key": "LM-6",
+    "title": "Fix Token Refresh Expiry in Enterprise Microsoft Teams Webhook Gateway",
+    "status": "in_review",
+    "priority": "urgent",
+    "type": "bug",
+    "story_points": 3,
+    "category": "Integrations",
+    "extra_json": "{\"sprint\": \"Sprint 1 (Active)\", \"epic\": \"Enterprise Integrations\", \"release\": \"v1.1.0\"}"
+  },
+  {
+    "id": "e44a63890986491a803eb3ee47e62959",
+    "key": "LM-7",
+    "title": "Complete First Pull Request: Feature Flag Integration in Auth Service",
+    "status": "todo",
+    "priority": "high",
+    "type": "story",
+    "story_points": 5,
+    "category": "Engineering",
+    "extra_json": "{\"sprint\": \"Sprint 1 (Active)\", \"epic\": \"Core Microservices\", \"release\": \"v1.1.0\"}"
+  },
+  {
+    "id": "4a2d4d429c1b4911a6e69a1e7148951a",
+    "key": "LM-8",
+    "title": "Configure Azure Application Insights Telemetry & Distributed Tracing",
+    "status": "done",
+    "priority": "medium",
+    "type": "task",
+    "story_points": 3,
+    "category": "Observability",
+    "extra_json": "{\"sprint\": \"Sprint 1 (Active)\", \"epic\": \"Cloud Platform\", \"release\": \"v1.0.0\"}"
+  },
+  {
+    "id": "9e7c3375453043abaef905ee2fc2fc4d",
+    "key": "LM-9",
+    "title": "Migrate GraphQL Subscriptions to Persistent WebSocket Cluster",
+    "status": "todo",
+    "priority": "medium",
+    "type": "story",
+    "story_points": 8,
+    "category": "Architecture",
+    "extra_json": "{\"sprint\": \"Sprint 2 (Upcoming)\", \"epic\": \"Core Microservices\", \"release\": \"v2.0.0\"}"
+  },
+  {
+    "id": "684d6b28113340cda9941d549280518f",
+    "key": "LM-10",
+    "title": "Implement SOC-2 Type II Automated Audit Logging Pipeline",
+    "status": "todo",
+    "priority": "urgent",
+    "type": "task",
+    "story_points": 5,
+    "category": "Compliance",
+    "extra_json": "{\"sprint\": \"Product Backlog\", \"epic\": \"Zero-Trust Security\", \"release\": \"v2.0.0\"}"
+  },
+  {
+    "id": "1af4c2e077864d0ebe3e2e3b805fd97b",
+    "key": "LM-11",
+    "title": "super",
+    "status": "todo",
+    "priority": "high",
+    "type": "story",
+    "story_points": 3,
+    "category": "Engineering",
+    "extra_json": "{\"sprint\": \"Sprint 1 (Active)\", \"epic\": \"Cloud Platform\", \"release\": \"v1.1.0\"}"
+  }
+]

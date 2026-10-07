@@ -1,0 +1,38 @@
+[
+  {
+    "id": "33e81822f2564bebb7d9be11f66f4730",
+    "title": "Welcome to Microsoft LaunchMate 2026 Cohort! \ud83d\ude80",
+    "body": "We are thrilled to welcome our newest engineers to the Redmond & Global engineering hub. Please complete Day-1 checklist items and join the Virtual Orientation.",
+    "created_at": "2026-10-06 16:07:50.810749"
+  },
+  {
+    "id": "a074c7ce9021468ebb3432b5bd6ff90a",
+    "title": "Launch Mate Live Test",
+    "body": "This is a live end-to-end test of the SendGrid email notification system. If you received this email, the announcement broadcast pipeline is fully operational!",
+    "created_at": "2026-10-06 20:41:42.993509"
+  },
+  {
+    "id": "54bfce803ee54806a463938068cdd7c1",
+    "title": "Launch Mate is LIVE!",
+    "body": "The AI Onboarding Assistant email notification pipeline is now fully operational. This announcement was broadcast via SendGrid to all registered employees in real-time.",
+    "created_at": "2026-10-06 20:42:57.201428"
+  },
+  {
+    "id": "1ae130bd4e8945979c71682a9222fdc9",
+    "title": "\ud83d\udce2 Announcement from Maanvi",
+    "body": "Welcome to Launch Mate! Please verify your onboarding tasks and let me know if you need any assistance.",
+    "created_at": "2026-10-07 01:39:27.940625"
+  },
+  {
+    "id": "4bebbc81c0934f7393e5030185351f3a",
+    "title": "\ud83d\udce2 Announcement from Maanvi",
+    "body": "hey ",
+    "created_at": "2026-10-07 06:47:11.089099"
+  },
+  {
+    "id": "b546816fc850453592db176974307318",
+    "title": "Important Onboarding Checkpoint",
+    "body": "Please complete your IT security setup and NHS / health benefits confirmation by end of day. If you need any assistance, reach out directly in #it-support or message HR partner Maanvi.",
+    "created_at": "2026-10-07 06:56:31.314328"
+  }
+]

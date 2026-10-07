@@ -1,0 +1,20 @@
+[
+  {
+    "id": "0289e378455b437297d0d7bfb81a90f1",
+    "name": "general",
+    "description": "General company discussion and cohort chats",
+    "is_announcement": 0
+  },
+  {
+    "id": "b14774a48f01444ea3f2141a270ae1b7",
+    "name": "announcements",
+    "description": "Official HR broadcasts and leadership townhalls",
+    "is_announcement": 1
+  },
+  {
+    "id": "93c5c41d66374e9e984ec2eabd4e00dc",
+    "name": "it-support",
+    "description": "Hardware provisioning, MFA setups, and VPN troubleshooting",
+    "is_announcement": 0
+  }
+]

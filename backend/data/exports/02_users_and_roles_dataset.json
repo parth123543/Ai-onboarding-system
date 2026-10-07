@@ -1,0 +1,47 @@
+[
+  {
+    "id": "29f97cd2d35a452ba1cea2d4fc1509d0",
+    "email": "admin@microsoft.com",
+    "full_name": "Maanvi",
+    "role": "Director of People Operations",
+    "department": "Human Resources",
+    "location": "Redmond, WA",
+    "is_admin": 1
+  },
+  {
+    "id": "4c894b6541bb4593bdba96f7d42cf1c2",
+    "email": "346789@gmail.com",
+    "full_name": "Parth parashar",
+    "role": "Software Engineer",
+    "department": "Engineering",
+    "location": "Redmond, WA",
+    "is_admin": 0
+  },
+  {
+    "id": "e931e57af03e4cb781c05149c11ddb48",
+    "email": "parthparashar1988@gmail.com",
+    "full_name": "Parth parashar",
+    "role": "Software Engineer",
+    "department": "Engineering",
+    "location": "Redmond, WA",
+    "is_admin": 0
+  },
+  {
+    "id": "7bb4a6e5148240cb95a96bba0d923133",
+    "email": "s24cseu1828@bennett.edu.in",
+    "full_name": "Parth Parashar",
+    "role": "Software Engineer",
+    "department": "Engineering",
+    "location": "Bangalore, India",
+    "is_admin": 0
+  },
+  {
+    "id": "795458ff6bd8452589805c88275457a4",
+    "email": "parthparashar20006@gmail.com",
+    "full_name": "Ishika",
+    "role": "Software Engineer",
+    "department": "Engineering",
+    "location": "Redmond, WA",
+    "is_admin": 0
+  }
+]
