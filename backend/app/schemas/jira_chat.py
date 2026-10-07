@@ -36,7 +36,10 @@ class ChannelMessageCreate(ChannelMessageBase):
 
 class ChannelMessageRead(ChannelMessageBase):
     id: str
-    sender_id: Optional[str]
+    sender_id: Optional[str] = None
+    sender_name: Optional[str] = None
+    sender_role: Optional[str] = None
+    sender_is_admin: Optional[bool] = False
     created_at: datetime
     attachments: List[MessageAttachmentBase] = []
     class Config:

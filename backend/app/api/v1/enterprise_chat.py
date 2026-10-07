@@ -28,6 +28,8 @@ from app.schemas.jira_chat import (
     AnnouncementRead,
 )
 
+from app.services.email_service import email_service
+
 logger = logging.getLogger("enterprise_chat_api")
 router = APIRouter()
 
@@ -65,17 +67,44 @@ async def get_channel_messages(
     )
     res = await db.execute(stmt)
     msgs = res.scalars().all()
-    return [
-        ChannelMessageRead(
-            id=m.id,
-            channel_id=m.channel_id,
-            sender_id=m.sender_id,
-            content=m.content,
-            metadata=m.extra_meta,
-            created_at=m.created_at,
+    results = []
+    for m in msgs:
+        s_name = None
+        s_role = None
+        s_is_admin = False
+        
+        if m.sender:
+            s_name = m.sender.full_name
+            s_role = m.sender.role
+            s_is_admin = bool(m.sender.is_admin)
+        elif m.extra_meta and isinstance(m.extra_meta, dict):
+            s_name = m.extra_meta.get("sender_name")
+            s_role = m.extra_meta.get("sender_role")
+            s_is_admin = bool(m.extra_meta.get("is_admin", False))
+            
+        if not s_name:
+            if m.extra_meta and isinstance(m.extra_meta, dict) and m.extra_meta.get("is_announcement"):
+                s_name = "Maanvi"
+                s_role = "Director of People Operations"
+                s_is_admin = True
+            else:
+                s_name = "Parth Parashar"
+                s_role = "Software Engineer"
+                
+        results.append(
+            ChannelMessageRead(
+                id=m.id,
+                channel_id=m.channel_id,
+                sender_id=m.sender_id,
+                sender_name=s_name,
+                sender_role=s_role,
+                sender_is_admin=s_is_admin,
+                content=m.content,
+                metadata=m.extra_meta,
+                created_at=m.created_at,
+            )
         )
-        for m in msgs
-    ]
+    return results
 
 @router.post("/channels/{channel_id}/messages", response_model=ChannelMessageRead)
 async def post_channel_message(
@@ -84,19 +113,95 @@ async def post_channel_message(
     sender_id: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
+    # Resolve sender details
+    sender_name = None
+    sender_role = None
+    sender_is_admin = False
+
+    if sender_id:
+        sender_user = await db.get(User, sender_id)
+        if sender_user:
+            sender_name = sender_user.full_name
+            sender_role = sender_user.role
+            sender_is_admin = bool(sender_user.is_admin)
+
+    meta = payload.metadata or {}
+    if not sender_name and isinstance(meta, dict):
+        sender_name = meta.get("sender_name")
+        sender_role = meta.get("sender_role")
+        sender_is_admin = bool(meta.get("is_admin", False))
+
+    if not sender_name:
+        sender_name = "Maanvi" if sender_is_admin else "Parth Parashar"
+        sender_role = "Director of People Operations" if sender_is_admin else "Software Engineer"
+
+    # Merge metadata
+    enriched_meta = {
+        **(meta if isinstance(meta, dict) else {}),
+        "source": "launchmate",
+        "sender_name": sender_name,
+        "sender_role": sender_role,
+        "is_admin": sender_is_admin,
+    }
+
     msg = ChannelMessage(
         channel_id=channel_id,
         sender_id=sender_id,
         content=payload.content,
-        extra_meta=payload.metadata or {"source": "launchmate"},
+        extra_meta=enriched_meta,
     )
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
+
+    # Check if channel is an announcements channel OR message sent by HR/Admin
+    channel_res = await db.execute(select(Channel).where(Channel.id == channel_id))
+    channel_obj = channel_res.scalar_one_or_none()
+    
+    is_ann_channel = bool(
+        channel_obj and (
+            channel_obj.is_announcement or 
+            channel_obj.name.lower() in ["announcements", "announcement"]
+        )
+    )
+
+    # If it's an announcement channel or posted by HR Admin, dispatch SendGrid notification!
+    if is_ann_channel or sender_is_admin:
+        ann_title = enriched_meta.get("announcement_title") or (
+            f"📢 Announcement from {sender_name}" if sender_is_admin else f"📢 Update in #{channel_obj.name if channel_obj else 'general'}"
+        )
+        # Store announcement so the top banner stays updated
+        ann_record = Announcement(
+            title=ann_title,
+            body=payload.content,
+            creator_id=sender_id,
+            read_by=[],
+        )
+        db.add(ann_record)
+        await db.commit()
+
+        # Dispatch email notification to all employees via SendGrid
+        try:
+            users_res = await db.execute(select(User).where(User.email.isnot(None)))
+            employees = users_res.scalars().all()
+            for emp in employees:
+                await email_service.send_hr_announcement_email(
+                    recipient_email=emp.email,
+                    recipient_name=emp.full_name or "Colleague",
+                    announcement_title=ann_title,
+                    announcement_body=payload.content,
+                    author_name=sender_name or "Maanvi"
+                )
+        except Exception as e:
+            logger.error(f"Failed to dispatch announcement emails for channel message: {e}")
+
     return ChannelMessageRead(
         id=msg.id,
         channel_id=msg.channel_id,
         sender_id=msg.sender_id,
+        sender_name=sender_name,
+        sender_role=sender_role,
+        sender_is_admin=sender_is_admin,
         content=msg.content,
         metadata=msg.extra_meta,
         created_at=msg.created_at,

@@ -275,7 +275,7 @@ export default function KanbanBoard() {
           description: ticketDesc,
           category: ticketCategory,
           priority: ticketPriority,
-          customer: "Elena Rostova"
+          customer: "Maanvi"
         })
       });
       if (res.ok) {
@@ -987,7 +987,7 @@ export default function KanbanBoard() {
               <div className="grid grid-cols-2 gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl text-xs">
                 <div>
                   <span className="text-white/40 block text-[10px]">Assignee:</span>
-                  <span className="font-semibold text-white">{selectedTask.assignee_name || "Elena Rostova"}</span>
+                  <span className="font-semibold text-white">{selectedTask.assignee_name || "Maanvi"}</span>
                 </div>
                 <div>
                   <span className="text-white/40 block text-[10px]">Story Points:</span>
@@ -1012,7 +1012,7 @@ export default function KanbanBoard() {
                   {commentsList.map((c, idx) => (
                     <div key={idx} className="p-2.5 bg-white/5 rounded-xl text-xs text-white/70 border border-white/5">
                       <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
-                        <strong className="text-white/60">Elena Rostova</strong>
+                        <strong className="text-white/60">Maanvi</strong>
                         <span>Today</span>
                       </div>
                       <p>{c}</p>

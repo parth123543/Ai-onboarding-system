@@ -17,6 +17,9 @@ interface Message {
   id: string;
   channel_id: string;
   sender_id?: string;
+  sender_name?: string;
+  sender_role?: string;
+  sender_is_admin?: boolean;
   content: string;
   metadata?: any;
   created_at: string;
@@ -29,13 +32,24 @@ interface Announcement {
   created_at: string;
 }
 
-export default function ChatRoom() {
+interface ChatRoomProps {
+  currentUser?: {
+    id: string;
+    full_name?: string;
+    email?: string;
+    role?: string;
+    is_admin?: boolean;
+  } | null;
+}
+
+export default function ChatRoom({ currentUser }: ChatRoomProps) {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [notificationToast, setNotificationToast] = useState<string | null>(null);
 
   // Teams Meeting Modal state
   const [showMeetingModal, setShowMeetingModal] = useState(false);
@@ -99,11 +113,24 @@ export default function ChatRoom() {
     e.preventDefault();
     if (!inputText.trim() || !activeChannel) return;
 
+    const myName = currentUser?.full_name || (currentUser?.is_admin ? "Maanvi" : "Parth Parashar");
+    const myRole = currentUser?.role || (currentUser?.is_admin ? "Director of People Operations" : "Software Engineer");
+    const isAdmin = Boolean(currentUser?.is_admin);
+
     const optimistic: Message = {
       id: "temp-" + Date.now(),
       channel_id: activeChannel.id,
+      sender_id: currentUser?.id,
+      sender_name: myName,
+      sender_role: myRole,
+      sender_is_admin: isAdmin,
       content: inputText,
-      metadata: { source: "launchmate" },
+      metadata: { 
+        source: "launchmate",
+        sender_name: myName,
+        sender_role: myRole,
+        is_admin: isAdmin,
+      },
       created_at: new Date().toISOString(),
     };
     setMessages(prev => [...prev, optimistic]);
@@ -111,16 +138,32 @@ export default function ChatRoom() {
     setInputText("");
 
     try {
-      await fetch(`http://localhost:8000/api/v1/enterprise-chat/channels/${activeChannel.id}/messages`, {
+      const url = currentUser?.id
+        ? `http://localhost:8000/api/v1/enterprise-chat/channels/${activeChannel.id}/messages?sender_id=${currentUser.id}`
+        : `http://localhost:8000/api/v1/enterprise-chat/channels/${activeChannel.id}/messages`;
+
+      await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           channel_id: activeChannel.id,
           content: textToSend,
-          metadata: { source: "launchmate" }
+          metadata: { 
+            source: "launchmate",
+            sender_name: myName,
+            sender_role: myRole,
+            is_admin: isAdmin,
+            is_announcement: activeChannel.is_announcement || isAdmin,
+          }
         })
       });
       fetchMessages(activeChannel.id);
+      fetchAnnouncements();
+
+      if (isAdmin || activeChannel.is_announcement) {
+        setNotificationToast("📢 Announcement broadcast & email notifications dispatched to all employee mail IDs via SendGrid!");
+        setTimeout(() => setNotificationToast(null), 6000);
+      }
     } catch (e) {
       console.error("Failed to post message:", e);
     }
@@ -149,6 +192,22 @@ export default function ChatRoom() {
 
   return (
     <div className="space-y-6">
+      {/* Live SendGrid Notification Toast Banner */}
+      {notificationToast && (
+        <div className="bg-emerald-950/90 border border-emerald-500/50 rounded-2xl p-4 flex items-center justify-between gap-3 text-emerald-200 text-xs shadow-2xl backdrop-blur-xl animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+            <span className="font-bold text-white">{notificationToast}</span>
+          </div>
+          <button 
+            onClick={() => setNotificationToast(null)} 
+            className="text-emerald-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Banner / Announcement Callout */}
       {announcements.length > 0 && (
         <div className="bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-purple-900/40 border border-blue-500/30 rounded-2xl p-4 flex items-center justify-between gap-4">
@@ -246,27 +305,49 @@ export default function ChatRoom() {
                 <span>No messages yet. Send a greeting to the cohort!</span>
               </div>
             ) : (
-              messages.map(m => (
-                <div key={m.id} className="bg-white/5 border border-white/5 rounded-2xl p-3.5 space-y-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-indigo-500/30 flex items-center justify-center text-[10px] font-bold text-indigo-300">
-                        U
+              messages.map(m => {
+                const displayName = m.sender_name || m.metadata?.sender_name || (m.sender_is_admin ? "Maanvi" : "Parth Parashar");
+                const displayRole = m.sender_role || m.metadata?.sender_role || (m.sender_is_admin ? "Director of People Operations" : "Software Engineer");
+                const isAdmin = Boolean(m.sender_is_admin || m.metadata?.is_admin || displayName.toLowerCase().includes("maanvi"));
+                const initial = displayName ? displayName.trim().charAt(0).toUpperCase() : "U";
+
+                return (
+                  <div key={m.id} className="bg-white/5 border border-white/5 rounded-2xl p-3.5 space-y-1.5 hover:bg-white/[0.07] transition-all">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+                          isAdmin 
+                            ? "bg-gradient-to-tr from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20" 
+                            : "bg-indigo-600/40 text-indigo-300 border border-indigo-500/30"
+                        }`}>
+                          {initial}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-white tracking-tight">{displayName}</span>
+                          {isAdmin ? (
+                            <span className="bg-amber-500/20 text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 tracking-wider">
+                              HR ADMIN
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-white/40">
+                              · {displayRole}
+                            </span>
+                          )}
+                        </div>
+                        {m.metadata?.source === "teams" && (
+                          <span className="bg-blue-500/20 text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-500/30 flex items-center gap-1">
+                            Teams
+                          </span>
+                        )}
                       </div>
-                      <span className="font-semibold text-white/80">LaunchMate Engineer</span>
-                      {m.metadata?.source === "teams" && (
-                        <span className="bg-blue-500/20 text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-500/30 flex items-center gap-1">
-                          Teams
-                        </span>
-                      )}
+                      <span className="text-white/30 text-[10px]">
+                        {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
                     </div>
-                    <span className="text-white/30 text-[10px]">
-                      {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </span>
+                    <p className="text-xs text-white/90 pl-8 leading-relaxed whitespace-pre-wrap">{m.content}</p>
                   </div>
-                  <p className="text-xs text-white/90 pl-7">{m.content}</p>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 

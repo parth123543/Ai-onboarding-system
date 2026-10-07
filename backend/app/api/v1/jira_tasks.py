@@ -418,7 +418,7 @@ SUPPORT_TICKETS = [
         "priority": "high",
         "status": "Waiting on Support",
         "customer": "Parth Parashar",
-        "assignee": "Elena Rostova (DevOps Lead)",
+        "assignee": "Maanvi (People Operations Lead)",
         "created_at": "2 hours ago",
         "sla_time_left": "1h 45m",
         "sla_status": "within_sla",

@@ -150,7 +150,7 @@ async def test_admin_escalation_and_nudge():
         esc_id = escalations[0]["id"]
         resolve_resp = await client.post(
             f"/api/v1/admin/escalations/{esc_id}/resolve",
-            json={"resolution_notes": "Employee contacted by HR partner via Teams.", "hr_assigned_to": "Elena Rostova"},
+            json={"resolution_notes": "Employee contacted by HR partner via Teams.", "hr_assigned_to": "Maanvi"},
             headers=headers
         )
         assert resolve_resp.status_code == 200

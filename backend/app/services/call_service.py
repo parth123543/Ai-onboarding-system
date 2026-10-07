@@ -18,12 +18,12 @@ class LiveAgentCallService:
         return [
             {
                 "id": "line_1",
-                "agent_name": "Elena Rostova",
+                "agent_name": "Maanvi",
                 "role": "Senior HR & People Partner",
                 "department": "Human Resources",
                 "specialty": "Payroll, Benefits, Leave, Visa, Company Policies",
                 "phone_number": self._custom_phones.get("line_1", settings.SUPPORT_PHONE_1),
-                "avatar": "ER",
+                "avatar": "M",
                 "status": "Available Now",
                 "wait_time": "< 1 min",
                 "direct_extension": "101"

@@ -816,7 +816,7 @@ export default function DashboardPage() {
           {mainTab === "jira" ? (
             <KanbanBoard />
           ) : mainTab === "chat" ? (
-            <ChatRoom />
+            <ChatRoom currentUser={currentUser} />
           ) : currentUser?.is_admin ? (
             <AdminPortal token={token} onRefreshStats={() => loadUserData(token)} onSwitchTab={(t) => setMainTab(t)} />
           ) : (

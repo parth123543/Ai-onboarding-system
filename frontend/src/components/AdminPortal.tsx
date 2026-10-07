@@ -435,7 +435,7 @@ export default function AdminPortal({ token, onRefreshStats, onSwitchTab }: Admi
         token,
         selectedEscalation.id,
         resolutionNotes || "HR Partner resolved following direct outreach.",
-        "Elena Rostova (HR Director)"
+        "Maanvi (HR Director)"
       );
       setSelectedEscalation(null);
       setResolutionNotes("");

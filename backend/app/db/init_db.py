@@ -181,7 +181,7 @@ INITIAL_TEMPLATES = [
 DEMO_USERS = [
     {
         "email": "admin@microsoft.com",
-        "full_name": "Elena Rostova",
+        "full_name": "Maanvi",
         "role": "Director of People Operations",
         "department": "Human Resources",
         "location": "Redmond, WA",
