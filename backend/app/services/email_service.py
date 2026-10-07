@@ -91,15 +91,18 @@ class EmailService:
         # If SendGrid API Key is configured, execute real dispatch
         if self.api_key:
             try:
+                plain_text = f"Hi {recipient_name},\n\nYour onboarding milestone '{task_title}' has passed its scheduled deadline ({formatted_due}).\nCategory: {category} | Priority: {priority}\n\nPlease complete this on your dashboard: http://localhost:3001\n\nLaunch Mate People Operations"
                 payload = {
                     "personalizations": [
                         {
                             "to": [{"email": target_account, "name": recipient_name}]
                         }
                     ],
-                    "from": {"email": self.from_email, "name": "Microsoft Launch Mate Onboarding"},
+                    "from": {"email": self.from_email, "name": "Launch Mate People Operations"},
+                    "reply_to": {"email": self.from_email, "name": "Launch Mate Support"},
                     "subject": subject,
                     "content": [
+                        {"type": "text/plain", "value": plain_text},
                         {"type": "text/html", "value": html_content}
                     ]
                 }
@@ -113,13 +116,15 @@ class EmailService:
                         json=payload,
                         timeout=8.0
                     )
+                    msg_id = resp.headers.get("X-Message-Id", "N/A")
                     if resp.status_code in [200, 201, 202]:
-                        logger.info(f"SendGrid: Email successfully delivered to {target_account}")
+                        logger.info(f"SendGrid: Email successfully delivered to {target_account} (Msg-ID: {msg_id})")
                         return {
                             "status": "sent_via_sendgrid",
                             "status_code": resp.status_code,
                             "recipient": target_account,
-                            "subject": subject
+                            "subject": subject,
+                            "message_id": msg_id
                         }
                     else:
                         logger.warning(f"SendGrid returned status {resp.status_code}: {resp.text}")
@@ -209,11 +214,16 @@ class EmailService:
 
         if self.api_key:
             try:
+                plain_text = f"Hi {recipient_name},\n\nAnnouncement from {author_name}:\n\n{announcement_title}\n\n{announcement_body}\n\nView discussions in Cohort Chat: http://localhost:3001\n\nLaunch Mate People Operations"
                 payload = {
                     "personalizations": [{"to": [{"email": target_account, "name": recipient_name}]}],
                     "from": {"email": self.from_email, "name": "Launch Mate HR Announcements"},
+                    "reply_to": {"email": self.from_email, "name": "Launch Mate Support"},
                     "subject": subject,
-                    "content": [{"type": "text/html", "value": html_content}]
+                    "content": [
+                        {"type": "text/plain", "value": plain_text},
+                        {"type": "text/html", "value": html_content}
+                    ]
                 }
                 async with httpx.AsyncClient() as client:
                     resp = await client.post(
@@ -222,9 +232,10 @@ class EmailService:
                         json=payload,
                         timeout=8.0
                     )
+                    msg_id = resp.headers.get("X-Message-Id", "N/A")
                     if resp.status_code in [200, 201, 202]:
-                        logger.info(f"SendGrid: Announcement email delivered to {target_account}")
-                        return {"status": "sent_via_sendgrid", "recipient": target_account, "subject": subject}
+                        logger.info(f"SendGrid: Announcement email delivered to {target_account} (Msg-ID: {msg_id})")
+                        return {"status": "sent_via_sendgrid", "recipient": target_account, "subject": subject, "message_id": msg_id}
             except Exception as e:
                 logger.error(f"SendGrid announcement error: {e}")
 
@@ -271,11 +282,16 @@ class EmailService:
 
         if self.api_key:
             try:
+                plain_text = f"Hi {recipient_name},\n\nReminder: your onboarding task '{task_title}' is scheduled for completion ({due_date_str}).\n\nComplete task on dashboard: http://localhost:3001\n\nLaunch Mate Notifications"
                 payload = {
                     "personalizations": [{"to": [{"email": target_account, "name": recipient_name}]}],
                     "from": {"email": self.from_email, "name": "Launch Mate Notifications"},
+                    "reply_to": {"email": self.from_email, "name": "Launch Mate Support"},
                     "subject": subject,
-                    "content": [{"type": "text/html", "value": html_content}]
+                    "content": [
+                        {"type": "text/plain", "value": plain_text},
+                        {"type": "text/html", "value": html_content}
+                    ]
                 }
                 async with httpx.AsyncClient() as client:
                     resp = await client.post(
@@ -284,8 +300,10 @@ class EmailService:
                         json=payload,
                         timeout=8.0
                     )
+                    msg_id = resp.headers.get("X-Message-Id", "N/A")
                     if resp.status_code in [200, 201, 202]:
-                        return {"status": "sent_via_sendgrid", "recipient": target_account}
+                        logger.info(f"SendGrid: Task reminder email delivered to {target_account} (Msg-ID: {msg_id})")
+                        return {"status": "sent_via_sendgrid", "recipient": target_account, "message_id": msg_id}
             except Exception as e:
                 logger.error(f"SendGrid reminder error: {e}")
 
