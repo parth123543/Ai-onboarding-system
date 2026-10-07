@@ -15,7 +15,6 @@ import {
   Volume2,
   Mic,
   MicOff,
-  Headphones,
   ChevronDown,
   ChevronUp,
   AlertCircle
@@ -335,23 +334,14 @@ export default function CallAgentModal({
                       Available during company business hours with automatic overflow routing.
                     </p>
 
-                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <div className="pt-2 flex items-center justify-center">
                       {/* Direct Tel: protocol link */}
                       <a
                         href={`tel:${assignedLine.phone_number}`}
-                        className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center justify-center gap-2"
                       >
                         <Phone className="w-4 h-4" /> Call via Phone / FaceTime
                       </a>
-
-                      {/* Interactive In-Browser Voice Call Simulator */}
-                      <button
-                        type="button"
-                        onClick={startInBrowserSimulation}
-                        className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        <Headphones className="w-4 h-4 text-amber-300" /> Simulate In-Browser VoIP Call
-                      </button>
                     </div>
                   </div>
                 </div>
