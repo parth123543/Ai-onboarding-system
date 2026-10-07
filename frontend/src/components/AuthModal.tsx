@@ -306,7 +306,7 @@ export default function AuthModal({ isOpen = true, onClose, onSuccess }: AuthMod
               <div className="flex justify-center mb-4">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/10 border border-white/20 shadow-lg animate-glow">
                   {/* Custom circular logo */}
-                  <img src="/logo.png" alt="Launch Mate" className="w-9 h-9 object-contain invert brightness-200" />
+                  <img src="/logo.png" alt="Launch Mate" className="w-9 h-9 object-contain" />
                 </div>
               </div>
               <h1 className="text-2xl font-black tracking-tight gradient-text mb-1">Launch Mate</h1>

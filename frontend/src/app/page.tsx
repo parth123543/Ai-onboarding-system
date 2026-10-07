@@ -314,7 +314,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-[#080810] flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-xl animate-glow">
-            <img src="/logo.png" alt="Launch Mate" className="w-10 h-10 object-contain invert brightness-200" />
+            <img src="/logo.png" alt="Launch Mate" className="w-10 h-10 object-contain" />
           </div>
           <p className="text-sm font-semibold text-white/50 tracking-widest uppercase">Loading Launch Mate...</p>
         </div>
@@ -335,7 +335,7 @@ export default function DashboardPage() {
             title="Return to Microsoft Launch Mate Landing Page"
           >
             <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/10 border border-white/20 shadow-md shrink-0 group-hover:bg-white/15 transition-all">
-              <img src="/logo.png" alt="Launch Mate" className="w-6 h-6 object-contain invert brightness-200" />
+              <img src="/logo.png" alt="Launch Mate" className="w-6 h-6 object-contain" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 whitespace-nowrap">
@@ -568,8 +568,8 @@ export default function DashboardPage() {
           {/* Top Header Branding identical to Unfold reference */}
           <div className="relative z-30 pt-8 sm:pt-12 px-6 sm:px-12 max-w-7xl mx-auto w-full flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 p-2.5 shadow-2xl flex items-center justify-center backdrop-blur-xl">
-                <img src="/logo.png" alt="Logo" className="w-7 h-7 object-contain invert brightness-200" />
+              <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 p-2 shadow-2xl flex items-center justify-center backdrop-blur-xl">
+                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">Microsoft</span>
@@ -796,7 +796,7 @@ export default function DashboardPage() {
               }`}
             >
               <Layers className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Jira Software (Plan • Track • Release • Support)</span>
+              <span>Work Hub (Plan • Track • Release • Support)</span>
             </button>
 
             <button

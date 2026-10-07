@@ -357,9 +357,9 @@ export default function KanbanBoard() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-white tracking-tight">LaunchMate Software (LM)</h2>
+                  <h2 className="text-xl font-bold text-white tracking-tight">LaunchMate Workspace (LM)</h2>
                   <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    JIRA CLOUD ENTERPRISE
+                    WORK HUB ENTERPRISE
                   </span>
                 </div>
                 <p className="text-xs text-white/50 mt-0.5">
@@ -381,7 +381,7 @@ export default function KanbanBoard() {
             <button
               onClick={fetchTasks}
               className="p-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-xl text-xs transition-all border border-white/10"
-              title="Refresh Jira Data"
+              title="Refresh Workspace Data"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -835,7 +835,7 @@ export default function KanbanBoard() {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Headphones className="w-4 h-4 text-emerald-400" />
-                  Jira Service Management (IT & HR Support Queue)
+                  Service Management (IT & HR Support Queue)
                 </h3>
                 <p className="text-xs text-white/50 mt-1">
                   Manage employee requests, cloud access approvals, and track SLA response targets in real time.
@@ -1061,7 +1061,7 @@ export default function KanbanBoard() {
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Plus className="w-4 h-4 text-blue-400" />
-                Create Jira Issue
+                Create New Issue
               </h3>
               <button onClick={() => setShowCreateModal(false)} className="text-white/40 hover:text-white">
                 <X className="w-5 h-5" />
@@ -1186,7 +1186,7 @@ export default function KanbanBoard() {
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Headphones className="w-4 h-4 text-emerald-400" />
-                Raise Jira Service Desk Request
+                Raise Service Desk Request
               </h3>
               <button onClick={() => setShowNewTicketModal(false)} className="text-white/40 hover:text-white">
                 <X className="w-5 h-5" />

@@ -589,14 +589,14 @@ export default function AdminPortal({ token, onRefreshStats, onSwitchTab }: Admi
                 <Layers className="w-5 h-5 text-indigo-300" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Jira Software Suite</h4>
+                <h4 className="text-sm font-bold text-white">Workspace & Task Hub</h4>
                 <p className="text-[11px] text-indigo-200/80">Plan • Track • Release • Support</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" />
           </div>
           <p className="text-xs text-indigo-100/70 mt-3 leading-relaxed">
-            Manage Kanban sprints, estimate story points, review release readiness, and resolve JSM service tickets.
+            Manage project sprints, estimate story points, review release readiness, and resolve service desk tickets.
           </p>
         </div>
 
